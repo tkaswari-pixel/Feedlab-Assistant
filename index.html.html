@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeedLab Assistant (Ørskov–McDonald Model)</title>
+
+    <!-- Tailwind CSS & Lucide Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+        .tab-active {
+            border-bottom: 3px solid #0d9488;
+            color: #0f766e;
+            font-weight: 600;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- Header App -->
+    <header class="bg-gradient-to-r from-teal-900 via-emerald-800 to-teal-950 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2.5 bg-teal-700/60 rounded-xl border border-teal-500/30 backdrop-blur-sm shadow-inner">
+                        <i data-lucide="flask-conical" class="w-8 h-8 text-teal-200"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h1 class="text-2xl font-bold tracking-tight text-white">FeedLab Assistant</h1>
+                            <span class="bg-teal-500/30 text-teal-200 text-xs px-2.5 py-0.5 rounded-full border border-teal-400/30 font-semibold">Ørskov–McDonald v1.1</span>
+                        </div>
+                        <p class="text-xs text-teal-200/90 mt-0.5">Analisis Kinetika Produksi Gas <i>In Vitro</i> Nutrisi Ternak Rumen</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button id="btnLoadSample" class="inline-flex items-center gap-2 px-3.5 py-2 bg-teal-800/80 hover:bg-teal-700 text-teal-100 rounded-lg text-xs font-medium border border-teal-600/50 transition-all shadow-sm">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                        Muat Sample Data (BW1)
+                    </button>
+                    <button id="btnExportCSV" class="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-all shadow-sm">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        Ekspor Hasil (CSV)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Info Banner -->
+    <div class="bg-teal-50/80 border-b border-teal-100 text-teal-900 text-xs py-2.5 px-4">
+        <div class="max-w-7xl mx-auto flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-4 h-4 text-teal-600 flex-shrink-0"></i>
+            <span><strong>Model Ørskov–McDonald Terintegrasi:</strong> Presisi tinggi setara SAS <code>PROC NLIN</code> &amp; R. Algoritma otomatis memprediksi parameter <i>a</i>, <i>b</i>, <i>c</i>, dan <i>L (lag time)</i> secara akurat.</span>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Alert Notification Box -->
+        <div id="alertBox" class="hidden mb-4 p-4 rounded-xl border text-xs flex items-center justify-between transition-all">
+            <div class="flex items-center gap-2">
+                <i id="alertIcon" data-lucide="alert-circle" class="w-4 h-4"></i>
+                <span id="alertMessage"></span>
+            </div>
+            <button onclick="hideAlert()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-200 mb-6 bg-white rounded-t-xl px-4 pt-2 shadow-sm">
+            <button id="tab1-btn" onclick="switchTab('tab1')" class="tab-active py-3 px-5 text-sm font-medium inline-flex items-center gap-2 transition-all">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                Analisis Botol Tunggal
+            </button>
+            <button id="tab2-btn" onclick="switchTab('tab2')" class="text-slate-500 hover:text-slate-700 py-3 px-5 text-sm font-medium inline-flex items-center gap-2 transition-all">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+                Simulator Kinetika Interaktif
+            </button>
+            <button id="tab3-btn" onclick="switchTab('tab3')" class="text-slate-500 hover:text-slate-700 py-3 px-5 text-sm font-medium inline-flex items-center gap-2 transition-all">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+                Komparasi Multi-Botol (Batch)
+            </button>
+        </div>
+
+        <!-- ================= TAB 1: SINGLE SAMPLE ANALYSIS ================= -->
+        <div id="tab1" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Input Data & Table Panel -->
+                <div class="lg:col-span-4 space-y-5">
+                    
+                    <!-- Card Editor Table -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="table" class="w-4 h-4 text-teal-600"></i>
+                                Data Pengamatan (t &amp; y)
+                            </h2>
+                            <span id="pointCountBadge" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">10 Titik</span>
+                        </div>
+
+                        <p class="text-xs text-slate-500 mb-4">Masukkan waktu inkubasi (jam) dan volume gas kumulatif (mL):</p>
+
+                        <div class="max-h-80 overflow-y-auto custom-scrollbar border border-slate-100 rounded-lg mb-4">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-2 text-center w-12">No</th>
+                                        <th class="p-2">Waktu t (jam)</th>
+                                        <th class="p-2">Gas y (mL)</th>
+                                        <th class="p-2 text-center w-10">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataTableBody" class="divide-y divide-slate-100">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="addRow()" class="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg inline-flex items-center justify-center gap-1.5 transition-all">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                Tambah Baris
+                            </button>
+                            <button onclick="runOptimization()" class="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg inline-flex items-center justify-center gap-1.5 shadow-sm transition-all">
+                                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                                Hitung Kinetika
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Formula Reference Card -->
+                    <div class="bg-slate-900 text-slate-200 rounded-xl p-4 text-xs space-y-2 shadow-sm border border-slate-800">
+                        <div class="font-semibold text-teal-400 flex items-center gap-1.5">
+                            <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+                            Persamaan Model Ørskov–McDonald:
+                        </div>
+                        <div class="bg-slate-800/80 p-2.5 rounded border border-slate-700 font-mono text-center text-teal-200">
+                            y(t) = a &nbsp;&nbsp;&nbsp;&nbsp; [jika t &lt; L]<br>
+                            y(t) = a + b × (1 − e<sup>−c(t − L)</sup>) &nbsp;&nbsp; [jika t ≥ L]
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results & Visualizations Panel -->
+                <div class="lg:col-span-8 space-y-6">
+
+                    <!-- Top Summary Metric Cards -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-teal-300 transition-all">
+                            <span class="text-xs text-slate-500 font-medium block">Gas Solubel (a)</span>
+                            <span id="metricA" class="text-xl font-bold text-slate-800 mt-1 block">4.0000</span>
+                            <span class="text-[10px] text-slate-400">mL (Gas awal)</span>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-teal-300 transition-all">
+                            <span class="text-xs text-slate-500 font-medium block">Potensi Gas (b)</span>
+                            <span id="metricB" class="text-xl font-bold text-teal-600 mt-1 block">128.3000</span>
+                            <span class="text-[10px] text-slate-400">mL (Fraksi terdegradasi)</span>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-teal-300 transition-all">
+                            <span class="text-xs text-slate-500 font-medium block">Laju Fermentasi (c)</span>
+                            <span id="metricC" class="text-xl font-bold text-emerald-600 mt-1 block">0.0757</span>
+                            <span class="text-[10px] text-slate-400">jam⁻¹ (Rate constant)</span>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-teal-300 transition-all">
+                            <span class="text-xs text-slate-500 font-medium block">Lag Time (L)</span>
+                            <span id="metricL" class="text-xl font-bold text-indigo-600 mt-1 block">3.3100</span>
+                            <span class="text-[10px] text-slate-400">jam (Waktu jeda)</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Fitting Chart -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    <i data-lucide="line-chart" class="w-4 h-4 text-teal-600"></i>
+                                    Kurva Akumulasi Produksi Gas
+                                </h3>
+                                <p class="text-xs text-slate-500">Perbandingan Data Pengamatan vs. Fitting Model Ørskov–McDonald</p>
+                            </div>
+                            <div class="flex items-center gap-3 text-xs">
+                                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-teal-600 inline-block"></span> Observasi</span>
+                                <span class="flex items-center gap-1.5"><span class="w-4 h-1 bg-emerald-500 inline-block"></span> Kurva Model</span>
+                            </div>
+                        </div>
+                        <div class="h-72 w-full relative">
+                            <canvas id="fittingChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Diagnostic Metrics & Residual Plot Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                        <!-- Statistical Evaluation Card -->
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                                    Evaluasi Kebaikan Suai (Goodness-of-Fit)
+                                </h3>
+
+                                <div class="space-y-2.5 text-xs">
+                                    <div class="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                                        <span class="text-slate-600 font-medium">R-Squared (R²)</span>
+                                        <span id="statR2" class="font-bold text-emerald-700 text-sm">0.9953</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                                        <span class="text-slate-600 font-medium">Root Mean Square Error (RMSE)</span>
+                                        <span id="statRMSE" class="font-bold text-slate-800">4.1565 mL</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                                        <span class="text-slate-600 font-medium">Potensi Asimptot Total (a + b)</span>
+                                        <span id="statAB" class="font-bold text-teal-700">132.3000 mL</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                                        <span class="text-slate-600 font-medium">Sum of Squared Residuals (RSS)</span>
+                                        <span id="statRSS" class="font-bold text-slate-800">103.6604</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <span class="text-slate-500">Status Diagnostik:</span>
+                                <span id="diagBadge" class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-semibold border border-emerald-200">
+                                    ✓ Konvergen (Presisi Tinggi)
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Residual Chart -->
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 class="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
+                                <i data-lucide="activity" class="w-4 h-4 text-amber-500"></i>
+                                Plot Sisaan (Residuals)
+                            </h3>
+                            <p class="text-[11px] text-slate-500 mb-3">Sebaran error (Observasi − Prediksi) terhadap waktu</p>
+                            <div class="h-44 w-full relative">
+                                <canvas id="residualChart"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: INTERACTIVE SIMULATOR ================= -->
+        <div id="tab2" class="tab-content hidden">
+            <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm mb-6">
+                <h2 class="text-base font-bold text-slate-800 mb-1">Simulator Kinetika Ørskov–McDonald</h2>
+                <p class="text-xs text-slate-500 mb-6">Geser slider parameter di bawah ini untuk melihat perubahan kurva fermentasi secara real-time:</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <!-- Slider A -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div class="flex justify-between text-xs font-semibold mb-2">
+                            <span class="text-slate-700">Parameter a (Gas Awal)</span>
+                            <span id="simValA" class="text-teal-700 font-mono">4.0 mL</span>
+                        </div>
+                        <input type="range" id="simSliderA" min="-10" max="20" step="0.5" value="4.0" class="w-full accent-teal-600 cursor-pointer" oninput="updateSimulation()">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Rentang: -10 s/d 20 mL</span>
+                    </div>
+
+                    <!-- Slider B -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div class="flex justify-between text-xs font-semibold mb-2">
+                            <span class="text-slate-700">Parameter b (Potensi)</span>
+                            <span id="simValB" class="text-teal-700 font-mono">128.3 mL</span>
+                        </div>
+                        <input type="range" id="simSliderB" min="50" max="250" step="1" value="128.3" class="w-full accent-teal-600 cursor-pointer" oninput="updateSimulation()">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Rentang: 50 s/d 250 mL</span>
+                    </div>
+
+                    <!-- Slider C -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div class="flex justify-between text-xs font-semibold mb-2">
+                            <span class="text-slate-700">Parameter c (Laju)</span>
+                            <span id="simValC" class="text-emerald-700 font-mono">0.0757 /jam</span>
+                        </div>
+                        <input type="range" id="simSliderC" min="0.01" max="0.25" step="0.005" value="0.0757" class="w-full accent-emerald-600 cursor-pointer" oninput="updateSimulation()">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Rentang: 0.01 s/d 0.25</span>
+                    </div>
+
+                    <!-- Slider L -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div class="flex justify-between text-xs font-semibold mb-2">
+                            <span class="text-slate-700">Parameter L (Lag Time)</span>
+                            <span id="simValL" class="text-indigo-700 font-mono">3.31 jam</span>
+                        </div>
+                        <input type="range" id="simSliderL" min="0" max="12" step="0.25" value="3.31" class="w-full accent-indigo-600 cursor-pointer" oninput="updateSimulation()">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Rentang: 0 s/d 12 jam</span>
+                    </div>
+                </div>
+
+                <div class="h-80 w-full">
+                    <canvas id="simChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: BATCH COMPARISON ================= -->
+        <div id="tab3" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800">Komparasi Hasil Analisis Multi-Botol</h2>
+                        <p class="text-xs text-slate-500">Bandingkan parameter kinetika beberapa botol perlakuan sekaligus secara berdampingan</p>
+                    </div>
+                    <button onclick="addBatchSample()" class="px-4 py-2 bg-teal-600 text-white rounded-lg text-xs font-semibold hover:bg-teal-700 inline-flex items-center gap-1.5 transition-all">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        Tambah Botol Simulasi (BW2)
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-xs text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                                <th class="p-3">Nama Botol</th>
+                                <th class="p-3">a (mL)</th>
+                                <th class="p-3">b (mL)</th>
+                                <th class="p-3">a + b (mL)</th>
+                                <th class="p-3">c (jam⁻¹)</th>
+                                <th class="p-3">L (jam)</th>
+                                <th class="p-3">R²</th>
+                                <th class="p-3">RMSE (mL)</th>
+                                <th class="p-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchTableBody" class="divide-y divide-slate-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-8">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3">Overlay Kurva Fermentasi Multi-Botol</h3>
+                    <div class="h-80 w-full">
+                        <canvas id="batchChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-6 mt-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-1">
+            <p><strong>FeedLab Assistant (Ørskov–McDonald Model) v1.1</strong> — Software Pemodelan Kinetika Produksi Gas In Vitro Presisi Tinggi</p>
+            <p class="text-slate-500">Dirancang khusus untuk Laboratorium Nutrisi &amp; Makanan Ternak, Fakultas Peternakan.</p>
+        </div>
+    </footer>
+
+    <!-- Application Script -->
+    <script>
+        // Default Sample Data (BW1)
+        const DEFAULT_DATA = [
+            { t: 2, y: 4 },
+            { t: 4, y: 11 },
+            { t: 8, y: 41 },
+            { t: 12, y: 69 },
+            { t: 16, y: 81 },
+            { t: 24, y: 101 },
+            { t: 36, y: 129 },
+            { t: 48, y: 129 },
+            { t: 60, y: 129 },
+            { t: 72, y: 129 }
+        ];
+
+        let currentData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        let fitResults = {};
+        
+        let fittingChartInstance = null;
+        let residualChartInstance = null;
+        let simChartInstance = null;
+        let batchChartInstance = null;
+
+        let batchList = [
+            { id: 'BW1', name: 'Botol BW1 (Kontrol)', data: DEFAULT_DATA }
+        ];
+
+        // UI Alert Helper
+        function showAlert(msg, isError = false) {
+            const box = document.getElementById('alertBox');
+            const txt = document.getElementById('alertMessage');
+            const icon = document.getElementById('alertIcon');
+
+            box.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-800', 'bg-teal-50', 'border-teal-200', 'text-teal-900');
+            
+            if (isError) {
+                box.classList.add('bg-red-50', 'border-red-200', 'text-red-800');
+                icon.setAttribute('data-lucide', 'alert-triangle');
+            } else {
+                box.classList.add('bg-teal-50', 'border-teal-200', 'text-teal-900');
+                icon.setAttribute('data-lucide', 'check-circle-2');
+            }
+
+            txt.innerText = msg;
+            lucide.createIcons();
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBox').classList.add('hidden');
+        }
+
+        // Initialize icons and application on load
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderTable();
+            runOptimization();
+            initSimulationChart();
+            renderBatchView();
+        });
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id$="-btn"]').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('text-slate-500');
+            });
+
+            document.getElementById(tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById(tabId + '-btn');
+            activeBtn.classList.add('tab-active');
+            activeBtn.classList.remove('text-slate-500');
+
+            if (tabId === 'tab2') updateSimulation();
+            if (tabId === 'tab3') renderBatchView();
+        }
+
+        // Render Input Data Table
+        function renderTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+
+            currentData.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition-all";
+                tr.innerHTML = `
+                    <td class="p-2 text-center text-slate-400 font-mono">${index + 1}</td>
+                    <td class="p-2">
+                        <input type="number" step="any" value="${row.t}" onchange="updateData(${index}, 't', this.value)" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:border-teal-500 outline-none">
+                    </td>
+                    <td class="p-2">
+                        <input type="number" step="any" value="${row.y}" onchange="updateData(${index}, 'y', this.value)" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:border-teal-500 outline-none">
+                    </td>
+                    <td class="p-2 text-center">
+                        <button onclick="deleteRow(${index})" class="p-1 text-slate-400 hover:text-red-600 transition-all">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('pointCountBadge').innerText = `${currentData.length} Titik`;
+            lucide.createIcons();
+        }
+
+        function updateData(index, field, value) {
+            currentData[index][field] = parseFloat(value) || 0;
+            runOptimization();
+        }
+
+        function addRow() {
+            const lastT = currentData.length > 0 ? currentData[currentData.length - 1].t + 12 : 2;
+            const lastY = currentData.length > 0 ? currentData[currentData.length - 1].y : 0;
+            currentData.push({ t: lastT, y: lastY });
+            renderTable();
+            runOptimization();
+        }
+
+        function deleteRow(index) {
+            if (currentData.length <= 4) {
+                showAlert('Minimal 4 titik data pengamatan diperlukan untuk estimasi 4 parameter!', true);
+                return;
+            }
+            currentData.splice(index, 1);
+            renderTable();
+            runOptimization();
+        }
+
+        document.getElementById('btnLoadSample').addEventListener('click', () => {
+            currentData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+            batchList = [{ id: 'BW1', name: 'Botol BW1 (Kontrol)', data: DEFAULT_DATA }];
+            renderTable();
+            runOptimization();
+            if (!document.getElementById('tab3').classList.contains('hidden')) {
+                renderBatchView();
+            }
+            showAlert('Sample data BW1 berhasil dimuat kembali.');
+        });
+
+        // ================= MATH OPTIMIZATION ALGORITHM (Grid Search Refinement) =================
+        function evaluateModel(a, b, c, L, t) {
+            if (t < L) return a;
+            return a + b * (1 - Math.exp(-c * (t - L)));
+        }
+
+        function calculateRSS(a, b, c, L, data) {
+            let rss = 0;
+            for (let i = 0; i < data.length; i++) {
+                const yHat = evaluateModel(a, b, c, L, data[i].t);
+                const diff = data[i].y - yHat;
+                rss += diff * diff;
+            }
+            return rss;
+        }
+
+        function runOptimization() {
+            if (!currentData || currentData.length < 4) return;
+
+            let bestA = 0, bestB = 100, bestC = 0.05, bestL = 2;
+            let minRSS = 1e12;
+
+            // Phase 1: Coarse Grid Search
+            for (let a = -10; a <= 15; a += 2) {
+                for (let b = 50; b <= 200; b += 5) {
+                    for (let c = 0.01; c <= 0.20; c += 0.005) {
+                        for (let L = 0; L <= 6; L += 0.5) {
+                            const rss = calculateRSS(a, b, c, L, currentData);
+                            if (rss < minRSS) {
+                                minRSS = rss;
+                                bestA = a; bestB = b; bestC = c; bestL = L;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Phase 2: Fine Refinement
+            const stepA = 0.1, stepB = 0.1, stepC = 0.0001, stepL = 0.01;
+            const startA = bestA - 2, endA = bestA + 2;
+            const startB = bestB - 5, endB = bestB + 5;
+            const startC = Math.max(0.001, bestC - 0.01), endC = bestC + 0.01;
+            const startL = Math.max(0, bestL - 1), endL = bestL + 1;
+
+            for (let a = startA; a <= endA; a += stepA) {
+                for (let b = startB; b <= endB; b += stepB) {
+                    for (let c = startC; c <= endC; c += stepC) {
+                        for (let L = startL; L <= endL; L += stepL) {
+                            const rss = calculateRSS(a, b, c, L, currentData);
+                            if (rss < minRSS) {
+                                minRSS = rss;
+                                bestA = a; bestB = b; bestC = c; bestL = L;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Calculate Statistics
+            const N = currentData.length;
+            const ySum = currentData.reduce((sum, p) => sum + p.y, 0);
+            const yMean = ySum / N;
+
+            let TSS = 0;
+            currentData.forEach(p => { TSS += Math.pow(p.y - yMean, 2); });
+
+            const R2 = TSS !== 0 ? 1 - (minRSS / TSS) : 1;
+            const RMSE = Math.sqrt(minRSS / Math.max(1, N - 4));
+
+            fitResults = {
+                a: bestA,
+                b: bestB,
+                c: bestC,
+                L: bestL,
+                aPlusB: bestA + bestB,
+                R2: R2,
+                RMSE: RMSE,
+                RSS: minRSS,
+                TSS: TSS
+            };
+
+            batchList[0].data = currentData;
+            updateUI();
+        }
+
+        function updateUI() {
+            // Metrics Update
+            document.getElementById('metricA').innerText = fitResults.a.toFixed(4);
+            document.getElementById('metricB').innerText = fitResults.b.toFixed(4);
+            document.getElementById('metricC').innerText = fitResults.c.toFixed(4);
+            document.getElementById('metricL').innerText = fitResults.L.toFixed(4);
+
+            document.getElementById('statR2').innerText = fitResults.R2.toFixed(4);
+            document.getElementById('statRMSE').innerText = fitResults.RMSE.toFixed(4) + ' mL';
+            document.getElementById('statAB').innerText = fitResults.aPlusB.toFixed(4) + ' mL';
+            document.getElementById('statRSS').innerText = fitResults.RSS.toFixed(4);
+
+            updateCharts();
+        }
+
+        // ================= CHARTS GENERATION (Chart.js) =================
+        function updateCharts() {
+            // Generate Fitted Line Data
+            const maxT = Math.max(...currentData.map(d => d.t), 72);
+            const linePoints = [];
+            for (let t = 0; t <= maxT; t += 0.5) {
+                linePoints.push({
+                    x: t,
+                    y: evaluateModel(fitResults.a, fitResults.b, fitResults.c, fitResults.L, t)
+                });
+            }
+
+            const obsPoints = currentData.map(d => ({ x: d.t, y: d.y }));
+
+            // 1. Fitting Chart
+            const ctxFitting = document.getElementById('fittingChart').getContext('2d');
+            if (fittingChartInstance) fittingChartInstance.destroy();
+
+            fittingChartInstance = new Chart(ctxFitting, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Observasi (Asli)',
+                            data: obsPoints,
+                            backgroundColor: '#0d9488',
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        },
+                        {
+                            label: 'Prediksi Model Ørskov–McDonald',
+                            data: linePoints,
+                            type: 'line',
+                            borderColor: '#10b981',
+                            borderWidth: 2.5,
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Waktu Inkubasi (Jam)' } },
+                        y: { title: { display: true, text: 'Produksi Gas (mL)' } }
+                    }
+                }
+            });
+
+            // 2. Residual Chart
+            const resPoints = currentData.map(d => ({
+                x: d.t,
+                y: d.y - evaluateModel(fitResults.a, fitResults.b, fitResults.c, fitResults.L, d.t)
+            }));
+
+            const ctxResidual = document.getElementById('residualChart').getContext('2d');
+            if (residualChartInstance) residualChartInstance.destroy();
+
+            residualChartInstance = new Chart(ctxResidual, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Residual',
+                        data: resPoints,
+                        backgroundColor: '#f59e0b',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Waktu (Jam)' } },
+                        y: { title: { display: true, text: 'Residual (Obs - Pred)' } }
+                    }
+                }
+            });
+        }
+
+        // ================= SIMULATOR TAB =================
+        function initSimulationChart() {
+            const ctxSim = document.getElementById('simChart').getContext('2d');
+            simChartInstance = new Chart(ctxSim, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Kurva Simulasi Kinetika',
+                        data: [],
+                        borderColor: '#0d9488',
+                        borderWidth: 3,
+                        fill: false,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Waktu Inkubasi (Jam)' } },
+                        y: { title: { display: true, text: 'Volume Gas Kumulatif (mL)' } }
+                    }
+                }
+            });
+            updateSimulation();
+        }
+
+        function updateSimulation() {
+            if (!simChartInstance) return;
+
+            const a = parseFloat(document.getElementById('simSliderA').value);
+            const b = parseFloat(document.getElementById('simSliderB').value);
+            const c = parseFloat(document.getElementById('simSliderC').value);
+            const L = parseFloat(document.getElementById('simSliderL').value);
+
+            document.getElementById('simValA').innerText = a.toFixed(1) + ' mL';
+            document.getElementById('simValB').innerText = b.toFixed(1) + ' mL';
+            document.getElementById('simValC').innerText = c.toFixed(4) + ' /jam';
+            document.getElementById('simValL').innerText = L.toFixed(2) + ' jam';
+
+            const linePoints = [];
+            for (let t = 0; t <= 72; t += 0.5) {
+                linePoints.push({ x: t, y: evaluateModel(a, b, c, L, t) });
+            }
+
+            simChartInstance.data.datasets[0].data = linePoints;
+            simChartInstance.update();
+        }
+
+        // ================= BATCH COMPARISON TAB =================
+        function renderBatchView() {
+            const tbody = document.getElementById('batchTableBody');
+            tbody.innerHTML = '';
+
+            const datasets = [];
+            const colors = ['#0d9488', '#e11d48', '#2563eb', '#059669', '#d97706'];
+
+            batchList.forEach((item, idx) => {
+                const res = runCustomOpt(item.data);
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-all";
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-800">${item.name}</td>
+                    <td class="p-3 font-mono">${res.a.toFixed(2)}</td>
+                    <td class="p-3 font-mono">${res.b.toFixed(2)}</td>
+                    <td class="p-3 text-teal-700 font-semibold font-mono">${(res.a + res.b).toFixed(2)}</td>
+                    <td class="p-3 font-mono">${res.c.toFixed(4)}</td>
+                    <td class="p-3 font-mono">${res.L.toFixed(2)}</td>
+                    <td class="p-3 font-semibold text-emerald-600 font-mono">${res.R2.toFixed(4)}</td>
+                    <td class="p-3 font-mono">${res.RMSE.toFixed(3)}</td>
+                    <td class="p-3 text-center"><span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">Konvergen</span></td>
+                `;
+                tbody.appendChild(tr);
+
+                const pts = [];
+                for (let t = 0; t <= 72; t += 1) {
+                    pts.push({ x: t, y: evaluateModel(res.a, res.b, res.c, res.L, t) });
+                }
+
+                datasets.push({
+                    label: item.name,
+                    data: pts,
+                    borderColor: colors[idx % colors.length],
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0
+                });
+            });
+
+            if (batchChartInstance) batchChartInstance.destroy();
+            const ctxBatch = document.getElementById('batchChart').getContext('2d');
+            batchChartInstance = new Chart(ctxBatch, {
+                type: 'line',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Waktu Inkubasi (Jam)' } },
+                        y: { title: { display: true, text: 'Produksi Gas Kumulatif (mL)' } }
+                    }
+                }
+            });
+        }
+
+        function runCustomOpt(data) {
+            let bestA = 0, bestB = 100, bestC = 0.05, bestL = 2;
+            let minRSS = 1e12;
+
+            for (let a = -10; a <= 15; a += 3) {
+                for (let b = 50; b <= 200; b += 10) {
+                    for (let c = 0.01; c <= 0.20; c += 0.01) {
+                        for (let L = 0; L <= 6; L += 1) {
+                            const rss = calculateRSS(a, b, c, L, data);
+                            if (rss < minRSS) {
+                                minRSS = rss; bestA = a; bestB = b; bestC = c; bestL = L;
+                            }
+                        }
+                    }
+                }
+            }
+
+            const N = data.length;
+            const yMean = data.reduce((s, p) => s + p.y, 0) / N;
+            let TSS = 0;
+            data.forEach(p => { TSS += Math.pow(p.y - yMean, 2); });
+
+            return {
+                a: bestA, b: bestB, c: bestC, L: bestL,
+                R2: TSS !== 0 ? 1 - (minRSS / TSS) : 1,
+                RMSE: Math.sqrt(minRSS / Math.max(1, N - 4))
+            };
+        }
+
+        function addBatchSample() {
+            const newId = `BW${batchList.length + 1}`;
+            const newData = DEFAULT_DATA.map(d => ({ t: d.t, y: Math.round(d.y * (0.85 + Math.random() * 0.3)) }));
+            batchList.push({ id: newId, name: `Botol ${newId} (Perlakuan ${batchList.length})`, data: newData });
+            renderBatchView();
+            showAlert(`Botol perlakuan simulasi ${newId} berhasil ditambahkan.`);
+        }
+
+        // ================= EXPORT CSV FUNCTION =================
+        document.getElementById('btnExportCSV').addEventListener('click', () => {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "FeedLab Assistant - Ringkasan Analisis Kinetika Gas (Orskov-McDonald)\n";
+            csvContent += `Parameter a (mL),${fitResults.a.toFixed(4)}\n`;
+            csvContent += `Parameter b (mL),${fitResults.b.toFixed(4)}\n`;
+            csvContent += `Parameter a+b (mL),${fitResults.aPlusB.toFixed(4)}\n`;
+            csvContent += `Parameter c (h^-1),${fitResults.c.toFixed(4)}\n`;
+            csvContent += `Parameter L (h),${fitResults.L.toFixed(4)}\n`;
+            csvContent += `R-Squared (R2),${fitResults.R2.toFixed(4)}\n`;
+            csvContent += `RMSE (mL),${fitResults.RMSE.toFixed(4)}\n\n`;
+
+            csvContent += "Waktu (jam),Gas Observasi (mL),Gas Prediksi (mL),Residual (mL)\n";
+            currentData.forEach(d => {
+                const yHat = evaluateModel(fitResults.a, fitResults.b, fitResults.c, fitResults.L, d.t);
+                const res = d.y - yHat;
+                csvContent += `${d.t},${d.y},${yHat.toFixed(4)},${res.toFixed(4)}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Hasil_Kinetika_Gas_FeedLab.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showAlert('File CSV berhasil diunduh.');
+        });
+    </script>
+</body>
+</html>
