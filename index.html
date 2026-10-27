@@ -135,7 +135,7 @@
                 <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-                            <i class="fa-solid fa-vial text-teal-400"></i> Parameter Masing-masing Botol (15 Botol)
+                            <i class="fa-solid fa-vial text-teal-400"></i> Parameter Masing-masing Botol
                         </h3>
                         <div class="max-h-[320px] overflow-y-auto pr-1">
                             <table class="w-full text-left text-[11px] border-collapse">
@@ -297,54 +297,44 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // MASTER DATABASE MULTI BOTTLE & TREATMENT
         let allBottlesResults = [];
         let treatmentSummaries = [];
         let singleChart, batchTreatmentsChart, simChart;
 
-        // GENERATE DEMO RESEARCH DATASET (3 PERLAKUAN x 5 ULANGAN = 15 BOTOL)
         function loadDefaultResearchDataset() {
             allBottlesResults = [];
             const treatments = [
-                { name: 'P0 (Kontrol)', baseA: 3.9, baseB: 128.4, baseC: 0.0757, baseL: 3.3 },
-                { name: 'P1 (Legum 15%)', baseA: 4.2, baseB: 136.5, baseC: 0.0820, baseL: 2.8 },
-                { name: 'P2 (Legum 30%)', baseA: 4.8, baseB: 142.0, baseC: 0.0880, baseL: 2.2 }
+                { name: 'P1', baseA: 3.8, baseB: 128.5, baseC: 0.0760, baseL: 3.3 },
+                { name: 'P2', baseA: 2.0, baseB: 162.0, baseC: 0.0700, baseL: 3.4 },
+                { name: 'P3', baseA: 5.8, baseB: 132.5, baseC: 0.0720, baseL: 3.2 },
+                { name: 'P4', baseA: 8.0, baseB: 146.5, baseC: 0.0540, baseL: 3.2 },
+                { name: 'P5', baseA: 4.0, baseB: 150.0, baseC: 0.0600, baseL: 3.7 },
+                { name: 'P6', baseA: 5.8, baseB: 155.0, baseC: 0.0680, baseL: 5.0 }
             ];
 
             const times = [2, 4, 8, 12, 16, 24, 36, 48, 60, 72];
 
-            treatments.forEach(trt => {
-                for(let rep = 1; rep <= 5; rep++) {
-                    let bottleId = `${trt.name}-U${rep}`;
-                    // Add minor experimental variations
-                    let varA = trt.baseA + (Math.random() * 0.4 - 0.2);
-                    let varB = trt.baseB + (Math.random() * 4 - 2);
-                    let varC = trt.baseC + (Math.random() * 0.004 - 0.002);
-                    let varL = trt.baseL + (Math.random() * 0.3 - 0.15);
+            treatments.forEach((trt, idx) => {
+                let bottleId = `DB${idx + 1}`;
+                let obsData = times.map(t => {
+                    let yHat = t < trt.baseL ? trt.baseA : trt.baseA + trt.baseB * (1 - Math.exp(-trt.baseC * (t - trt.baseL)));
+                    return { t: t, y: parseFloat(yHat.toFixed(1)) };
+                });
 
-                    let obsData = times.map(t => {
-                        let yHat = t < varL ? varA : varA + varB * (1 - Math.exp(-varC * (t - varL)));
-                        let noise = (Math.random() * 3 - 1.5);
-                        return { t: t, y: Math.max(0, parseFloat((yHat + noise).toFixed(1))) };
-                    });
-
-                    // Fit model for this bottle
-                    let fit = fitOrskovForBottle(obsData);
-                    allBottlesResults.push({
-                        bottleId: bottleId,
-                        treatment: trt.name,
-                        replicate: rep,
-                        obsData: obsData,
-                        params: fit
-                    });
-                }
+                let fit = fitOrskovForBottle(obsData);
+                allBottlesResults.push({
+                    bottleId: bottleId,
+                    treatment: trt.name,
+                    replicate: 1,
+                    obsData: obsData,
+                    params: fit
+                });
             });
 
             computeTreatmentSummaries();
             renderAllViews();
         }
 
-        // MODEL EVALUATION & FITTING
         function evalOrskov(t, a, b, c, L) {
             return t < L ? a : a + b * (1 - Math.exp(-c * (t - L)));
         }
@@ -399,7 +389,6 @@
             };
         }
 
-        // COMPUTE MEAN & STD DEV PER TREATMENT
         function computeTreatmentSummaries() {
             let trtMap = {};
             allBottlesResults.forEach(item => {
@@ -418,10 +407,10 @@
                 let meanL = list.reduce((s, p) => s + p.L, 0) / n;
                 let meanR2 = list.reduce((s, p) => s + p.r2, 0) / n;
 
-                let sdA = Math.sqrt(list.reduce((s, p) => s + Math.pow(p.a - meanA, 2), 0) / (n - 1 || 1));
-                let sdB = Math.sqrt(list.reduce((s, p) => s + Math.pow(p.b - meanB, 2), 0) / (n - 1 || 1));
-                let sdC = Math.sqrt(list.reduce((s, p) => s + Math.pow(p.c - meanC, 2), 0) / (n - 1 || 1));
-                let sdL = Math.sqrt(list.reduce((s, p) => s + Math.pow(p.L - meanL, 2), 0) / (n - 1 || 1));
+                let sdA = n > 1 ? Math.sqrt(list.reduce((s, p) => s + Math.pow(p.a - meanA, 2), 0) / (n - 1)) : 0;
+                let sdB = n > 1 ? Math.sqrt(list.reduce((s, p) => s + Math.pow(p.b - meanB, 2), 0) / (n - 1)) : 0;
+                let sdC = n > 1 ? Math.sqrt(list.reduce((s, p) => s + Math.pow(p.c - meanC, 2), 0) / (n - 1)) : 0;
+                let sdL = n > 1 ? Math.sqrt(list.reduce((s, p) => s + Math.pow(p.L - meanL, 2), 0) / (n - 1)) : 0;
 
                 treatmentSummaries.push({
                     name: trtName,
@@ -436,16 +425,13 @@
             }
         }
 
-        // RENDER ALL VIEWS
         function renderAllViews() {
-            // Update Stat Cards
             document.getElementById('stat-total-bottles').innerText = allBottlesResults.length;
             document.getElementById('stat-total-treatments').innerText = treatmentSummaries.length;
             document.getElementById('stat-replicates').innerText = treatmentSummaries.length > 0 ? treatmentSummaries[0].n : 0;
             let avgR2 = allBottlesResults.reduce((s, b) => s + b.params.r2, 0) / (allBottlesResults.length || 1);
             document.getElementById('stat-avg-r2').innerText = avgR2.toFixed(4);
 
-            // Populate Summary Table
             const trtBody = document.getElementById('treatment-summary-body');
             trtBody.innerHTML = '';
             treatmentSummaries.forEach(t => {
@@ -463,7 +449,6 @@
                 `;
             });
 
-            // Populate All Bottles Table
             const btlBody = document.getElementById('all-bottles-body');
             btlBody.innerHTML = '';
             const selector = document.getElementById('bottle-selector');
@@ -487,10 +472,9 @@
             inspectSelectedBottle();
         }
 
-        // RENDER BATCH TREATMENT CHART
         function renderTreatmentChart() {
             const ctx = document.getElementById('chart-batch-treatments').getContext('2d');
-            const colors = ['#10B981', '#38BDF8', '#F59E0B', '#EC4899', '#8B5CF6'];
+            const colors = ['#10B981', '#38BDF8', '#F59E0B', '#EC4899', '#8B5CF6', '#14B8A6', '#F43F5E', '#A855F7'];
 
             let datasets = treatmentSummaries.map((trt, idx) => {
                 let pts = [];
@@ -501,7 +485,7 @@
                     label: `${trt.name} (Rataan)`,
                     data: pts,
                     borderColor: colors[idx % colors.length],
-                    borderWidth: 3,
+                    borderWidth: 2.5,
                     fill: false,
                     tension: 0.3,
                     pointRadius: 0
@@ -516,8 +500,20 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-                            x: { title: { display: true, text: 'Waktu Inkubasi (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                            y: { title: { display: true, text: 'Produksi Gas Kumulatif Rataan (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
+                            x: { 
+                                type: 'linear',
+                                position: 'bottom',
+                                min: 0,
+                                max: 72,
+                                title: { display: true, text: 'Waktu Inkubasi (Jam)', color: '#94A3B8' }, 
+                                grid: { color: 'rgba(255,255,255,0.05)' }, 
+                                ticks: { color: '#94A3B8', stepSize: 6 } 
+                            },
+                            y: { 
+                                title: { display: true, text: 'Produksi Gas Kumulatif Rataan (mL)', color: '#94A3B8' }, 
+                                grid: { color: 'rgba(255,255,255,0.05)' }, 
+                                ticks: { color: '#94A3B8' } 
+                            }
                         },
                         plugins: { legend: { labels: { color: '#E2E8F0' } } }
                     }
@@ -528,7 +524,6 @@
             }
         }
 
-        // INSPECT SINGLE BOTTLE
         function inspectSelectedBottle() {
             const idx = parseInt(document.getElementById('bottle-selector').value || 0);
             const bottle = allBottlesResults[idx];
@@ -557,7 +552,6 @@
                 `;
             });
 
-            // Single Chart
             const ctx = document.getElementById('chart-single-fit').getContext('2d');
             let pts = [];
             for(let t = 0; t <= 72; t += 1) {
@@ -577,7 +571,7 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-                            x: { title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
+                            x: { type: 'linear', min: 0, max: 72, title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
                             y: { title: { display: true, text: 'Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
                         },
                         plugins: { legend: { labels: { color: '#E2E8F0' } } }
@@ -590,7 +584,6 @@
             }
         }
 
-        // SWITCH TAB
         function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -599,7 +592,6 @@
             if(tab === 'simulator') updateSimulation();
         }
 
-        // EXCEL MULTI-BOTTLE PARSER
         document.getElementById('excel-upload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if(!file) return;
@@ -612,13 +604,12 @@
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
                 if(jsonData.length > 0) {
-                    // Group data by Treatment and Bottle
                     let bottleGroup = {};
                     jsonData.forEach(row => {
-                        let bottle = row.Bottle || row.Botol || row.Sample || row.Kode || 'BW1';
-                        let trt = row.Treatment || row.Perlakuan || bottle.split('-')[0] || 'Kontrol';
-                        let t = parseFloat(row.Time || row.t || row.Waktu || 0);
-                        let y = parseFloat(row.Gas || row.y || row.Produksi || 0);
+                        let bottle = row.Bottle || row.bottle || row.Botol || row.botol || row.Sample || row.sample || row.Kode || row.kode || 'BW1';
+                        let trt = row.Treatment || row.treatment || row.Perlakuan || row.perlakuan || bottle.split('-')[0] || 'Kontrol';
+                        let t = parseFloat(row.Time || row.time || row.t || row.Waktu || row.waktu || 0);
+                        let y = parseFloat(row.Gas || row.gas || row.y || row.Produksi || row.produksi || 0);
 
                         if(!bottleGroup[bottle]) {
                             bottleGroup[bottle] = { treatment: trt, obsData: [] };
@@ -628,7 +619,6 @@
                         }
                     });
 
-                    // Re-calculate all bottles
                     allBottlesResults = [];
                     for(let bName in bottleGroup) {
                         let bData = bottleGroup[bName];
@@ -650,7 +640,6 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // EXPORT RESEARCH CSV REPORT
         function exportBatchCSV() {
             let csv = "LAPORAN KINETIKA FERMENTASI IN VITRO (MODEL ORSKOV-MCDONALD)\n";
             csv += "FeedLab Assistant v2.0 Multi-Treatment Edition\n\n";
@@ -676,7 +665,6 @@
             showToast("Laporan lengkap berhasil diekspor!");
         }
 
-        // SIMULATOR LOGIC
         function updateSimulation() {
             const a = parseFloat(document.getElementById('sim-a').value);
             const b = parseFloat(document.getElementById('sim-b').value);
@@ -708,7 +696,7 @@
                     options: {
                         responsive: true, maintainAspectRatio: false,
                         scales: {
-                            x: { title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
+                            x: { type: 'linear', min: 0, max: 72, title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
                             y: { title: { display: true, text: 'Produksi Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
                         },
                         plugins: { legend: { labels: { color: '#E2E8F0' } } }
