@@ -55,13 +55,13 @@
 
         <!-- NAVIGASI TAB -->
         <div class="flex border-b border-slate-800 gap-8 text-sm text-slate-400">
-            <button class="tab-btn active py-3 px-1 flex items-center gap-2" onclick="switchTab('batch')">
+            <button class="tab-btn active py-3 px-1 flex items-center gap-2" onclick="switchTab('batch', event)">
                 <i class="fa-solid fa-layer-group"></i> Laporan Penelitian (Perlakuan & Ulangan)
             </button>
-            <button class="tab-btn py-3 px-1 flex items-center gap-2" onclick="switchTab('single')">
+            <button class="tab-btn py-3 px-1 flex items-center gap-2" onclick="switchTab('single', event)">
                 <i class="fa-solid fa-chart-line"></i> Inspeksi Detail Per Botol
             </button>
-            <button class="tab-btn py-3 px-1 flex items-center gap-2" onclick="switchTab('simulator')">
+            <button class="tab-btn py-3 px-1 flex items-center gap-2" onclick="switchTab('simulator', event)">
                 <i class="fa-solid fa-sliders"></i> Simulator Kinetika Integratif
             </button>
         </div>
@@ -73,27 +73,27 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-emerald-500">
                     <span class="text-xs text-slate-400 block font-medium">Total Botol/Sampel</span>
-                    <span id="stat-total-bottles" class="text-xl font-bold text-slate-100 mt-1 block">15</span>
+                    <span id="stat-total-bottles" class="text-xl font-bold text-slate-100 mt-1 block">6</span>
                     <span class="text-[10px] text-slate-500">Botol Inkubasi</span>
                 </div>
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-teal-500">
                     <span class="text-xs text-slate-400 block font-medium">Jumlah Perlakuan</span>
-                    <span id="stat-total-treatments" class="text-xl font-bold text-emerald-400 mt-1 block">3</span>
+                    <span id="stat-total-treatments" class="text-xl font-bold text-emerald-400 mt-1 block">6</span>
                     <span class="text-[10px] text-slate-500">Grup Perlakuan</span>
                 </div>
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-indigo-500">
                     <span class="text-xs text-slate-400 block font-medium">Jumlah Ulangan</span>
-                    <span id="stat-replicates" class="text-xl font-bold text-slate-100 mt-1 block">5</span>
+                    <span id="stat-replicates" class="text-xl font-bold text-slate-100 mt-1 block">1</span>
                     <span class="text-[10px] text-slate-500">Ulangan / Perlakuan</span>
                 </div>
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-amber-500">
                     <span class="text-xs text-slate-400 block font-medium">Rata-rata R² Model</span>
-                    <span id="stat-avg-r2" class="text-xl font-bold text-amber-400 mt-1 block">0.9932</span>
+                    <span id="stat-avg-r2" class="text-xl font-bold text-amber-400 mt-1 block">0.9953</span>
                     <span class="text-[10px] text-slate-500">Presisi Kebaikan Suai</span>
                 </div>
             </div>
 
-            <!-- TABEL RINGKASAN PER PERLAKUAN (RATA-RATA +/- STD DEV) -->
+            <!-- TABEL RINGKASAN PER PERLAKUAN -->
             <div class="glass-panel p-6 rounded-2xl">
                 <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-table-cells text-emerald-400"></i> Rataan Parameter Kinetika Fermentasi per Perlakuan (Mean ± SD)
@@ -113,7 +113,6 @@
                             </tr>
                         </thead>
                         <tbody id="treatment-summary-body" class="divide-y divide-slate-800 text-slate-300">
-                            <!-- Populated dynamically -->
                         </tbody>
                     </table>
                 </div>
@@ -126,12 +125,12 @@
                     <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-chart-area text-emerald-400"></i> Kurva Profil Fermentasi Rataan Tiap Perlakuan
                     </h3>
-                    <div class="h-[360px]">
+                    <div class="relative h-[360px] w-full">
                         <canvas id="chart-batch-treatments"></canvas>
                     </div>
                 </div>
 
-                <!-- Tabel Detail per Botol (Scrollable) -->
+                <!-- Tabel Detail per Botol -->
                 <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
@@ -150,7 +149,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="all-bottles-body" class="divide-y divide-slate-800 text-slate-300 font-mono">
-                                    <!-- Populated dynamically -->
                                 </tbody>
                             </table>
                         </div>
@@ -167,11 +165,9 @@
                     <i class="fa-solid fa-filter text-emerald-400"></i> Pilih Botol/Sampel untuk Diinspeksi:
                 </label>
                 <select id="bottle-selector" onchange="inspectSelectedBottle()" class="bg-slate-900 border border-slate-700 text-emerald-400 text-xs px-3 py-1.5 rounded-lg font-semibold outline-none">
-                    <!-- Dynamic bottle options -->
                 </select>
             </div>
 
-            <!-- RINGKASAN BOTOL TERPILIH -->
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-emerald-500">
                     <span class="text-xs text-slate-400 block font-medium">a (Gas Terlarut)</span>
@@ -207,7 +203,6 @@
                 </div>
             </div>
 
-            <!-- GRAFIK SINGLE FIT & RESIDUAL -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="glass-panel p-5 rounded-2xl">
                     <h3 class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
@@ -224,7 +219,6 @@
                                 </tr>
                             </thead>
                             <tbody id="single-table-body" class="divide-y divide-slate-800 text-slate-300 font-mono">
-                                <!-- Dynamic rows -->
                             </tbody>
                         </table>
                     </div>
@@ -234,14 +228,14 @@
                     <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-chart-area text-emerald-400"></i> Fit Kurva Ørskov Botol Terpilih
                     </h3>
-                    <div class="h-[320px]">
+                    <div class="relative h-[320px] w-full">
                         <canvas id="chart-single-fit"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 3: SIMULATOR -->
+        <!-- TAB 3: SIMULATOR KINETIKA INTEGRATIF -->
         <div id="tab-simulator" class="tab-content hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="glass-panel p-6 rounded-2xl space-y-5">
@@ -281,7 +275,7 @@
                     <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-wave-square text-emerald-400"></i> Visualisasi Respon Dinamis Kurva Ørskov
                     </h3>
-                    <div class="h-[360px]">
+                    <div class="relative h-[360px] w-full">
                         <canvas id="chart-simulation"></canvas>
                     </div>
                 </div>
@@ -299,7 +293,11 @@
     <script>
         let allBottlesResults = [];
         let treatmentSummaries = [];
-        let singleChart, batchTreatmentsChart, simChart;
+        let singleChart = null, batchTreatmentsChart = null, simChart = null;
+
+        function evalOrskov(t, a, b, c, L) {
+            return t < L ? a : a + b * (1 - Math.exp(-c * (t - L)));
+        }
 
         function loadDefaultResearchDataset() {
             allBottlesResults = [];
@@ -317,7 +315,7 @@
             treatments.forEach((trt, idx) => {
                 let bottleId = `DB${idx + 1}`;
                 let obsData = times.map(t => {
-                    let yHat = t < trt.baseL ? trt.baseA : trt.baseA + trt.baseB * (1 - Math.exp(-trt.baseC * (t - trt.baseL)));
+                    let yHat = evalOrskov(t, trt.baseA, trt.baseB, trt.baseC, trt.baseL);
                     return { t: t, y: parseFloat(yHat.toFixed(1)) };
                 });
 
@@ -333,10 +331,6 @@
 
             computeTreatmentSummaries();
             renderAllViews();
-        }
-
-        function evalOrskov(t, a, b, c, L) {
-            return t < L ? a : a + b * (1 - Math.exp(-c * (t - L)));
         }
 
         function fitOrskovForBottle(obsData) {
@@ -476,14 +470,13 @@
             const ctx = document.getElementById('chart-batch-treatments').getContext('2d');
             const colors = ['#10B981', '#38BDF8', '#F59E0B', '#EC4899', '#8B5CF6', '#14B8A6', '#F43F5E', '#A855F7'];
 
+            const times = Array.from({length: 73}, (_, i) => i);
+
             let datasets = treatmentSummaries.map((trt, idx) => {
-                let pts = [];
-                for(let t = 0; t <= 72; t += 1) {
-                    pts.push({ x: t, y: evalOrskov(t, trt.a, trt.b, trt.c, trt.L) });
-                }
+                let dataPoints = times.map(t => evalOrskov(t, trt.a, trt.b, trt.c, trt.L));
                 return {
                     label: `${trt.name} (Rataan)`,
-                    data: pts,
+                    data: dataPoints,
                     borderColor: colors[idx % colors.length],
                     borderWidth: 2.5,
                     fill: false,
@@ -492,36 +485,34 @@
                 };
             });
 
-            if(!batchTreatmentsChart) {
-                batchTreatmentsChart = new Chart(ctx, {
-                    type: 'line',
-                    data: { datasets: datasets },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { 
-                                type: 'linear',
-                                position: 'bottom',
-                                min: 0,
-                                max: 72,
-                                title: { display: true, text: 'Waktu Inkubasi (Jam)', color: '#94A3B8' }, 
-                                grid: { color: 'rgba(255,255,255,0.05)' }, 
-                                ticks: { color: '#94A3B8', stepSize: 6 } 
-                            },
-                            y: { 
-                                title: { display: true, text: 'Produksi Gas Kumulatif Rataan (mL)', color: '#94A3B8' }, 
-                                grid: { color: 'rgba(255,255,255,0.05)' }, 
-                                ticks: { color: '#94A3B8' } 
-                            }
-                        },
-                        plugins: { legend: { labels: { color: '#E2E8F0' } } }
-                    }
-                });
-            } else {
-                batchTreatmentsChart.data.datasets = datasets;
-                batchTreatmentsChart.update();
+            if(batchTreatmentsChart) {
+                batchTreatmentsChart.destroy();
             }
+
+            batchTreatmentsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: times,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            title: { display: true, text: 'Waktu Inkubasi (Jam)', color: '#94A3B8' }, 
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { color: '#94A3B8', stepSize: 6 } 
+                        },
+                        y: { 
+                            title: { display: true, text: 'Produksi Gas Kumulatif Rataan (mL)', color: '#94A3B8' }, 
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { color: '#94A3B8' } 
+                        }
+                    },
+                    plugins: { legend: { labels: { color: '#E2E8F0' } } }
+                }
+            });
         }
 
         function inspectSelectedBottle() {
@@ -553,43 +544,105 @@
             });
 
             const ctx = document.getElementById('chart-single-fit').getContext('2d');
-            let pts = [];
-            for(let t = 0; t <= 72; t += 1) {
-                pts.push({ x: t, y: evalOrskov(t, bottle.params.a, bottle.params.b, bottle.params.c, bottle.params.L) });
+            const times = Array.from({length: 73}, (_, i) => i);
+            let curvePoints = times.map(t => evalOrskov(t, bottle.params.a, bottle.params.b, bottle.params.c, bottle.params.L));
+
+            if(singleChart) {
+                singleChart.destroy();
             }
 
-            if(!singleChart) {
-                singleChart = new Chart(ctx, {
-                    type: 'scatter',
-                    data: {
-                        datasets: [
-                            { label: 'Data Observasi', data: bottle.obsData.map(d => ({ x: d.t, y: d.y })), backgroundColor: '#10B981', pointRadius: 6 },
-                            { label: 'Prediksi Model Ørskov', data: pts, type: 'line', borderColor: '#14B8A6', borderWidth: 2.5, pointRadius: 0, tension: 0.3 }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { type: 'linear', min: 0, max: 72, title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                            y: { title: { display: true, text: 'Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
+            singleChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: times,
+                    datasets: [
+                        { 
+                            label: 'Data Observasi', 
+                            data: bottle.obsData.map(d => ({ x: d.t, y: d.y })), 
+                            type: 'scatter',
+                            backgroundColor: '#10B981', 
+                            pointRadius: 6 
                         },
-                        plugins: { legend: { labels: { color: '#E2E8F0' } } }
-                    }
-                });
-            } else {
-                singleChart.data.datasets[0].data = bottle.obsData.map(d => ({ x: d.t, y: d.y }));
-                singleChart.data.datasets[1].data = pts;
-                singleChart.update();
-            }
+                        { 
+                            label: 'Prediksi Model Ørskov', 
+                            data: times.map((t, i) => ({ x: t, y: curvePoints[i] })), 
+                            type: 'line', 
+                            borderColor: '#14B8A6', 
+                            borderWidth: 2.5, 
+                            pointRadius: 0, 
+                            tension: 0.3 
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', min: 0, max: 72, title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
+                        y: { title: { display: true, text: 'Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
+                    },
+                    plugins: { legend: { labels: { color: '#E2E8F0' } } }
+                }
+            });
         }
 
-        function switchTab(tab) {
+        function updateSimulation() {
+            const a = parseFloat(document.getElementById('sim-a').value);
+            const b = parseFloat(document.getElementById('sim-b').value);
+            const c = parseFloat(document.getElementById('sim-c').value);
+            const L = parseFloat(document.getElementById('sim-l').value);
+
+            document.getElementById('sim-val-a').innerText = `${a} mL`;
+            document.getElementById('sim-val-b').innerText = `${b} mL`;
+            document.getElementById('sim-val-c').innerText = `${c} /jam`;
+            document.getElementById('sim-val-l').innerText = `${L} jam`;
+
+            const ctxSim = document.getElementById('chart-simulation').getContext('2d');
+            const times = Array.from({length: 73}, (_, i) => i);
+            let simPoints = times.map(t => evalOrskov(t, a, b, c, L));
+
+            if(simChart) {
+                simChart.destroy();
+            }
+
+            simChart = new Chart(ctxSim, {
+                type: 'line',
+                data: {
+                    labels: times,
+                    datasets: [{
+                        label: 'Simulasi Kurva Orskov',
+                        data: simPoints,
+                        borderColor: '#38BDF8',
+                        borderWidth: 3,
+                        fill: true,
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
+                        y: { title: { display: true, text: 'Produksi Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
+                    },
+                    plugins: { legend: { labels: { color: '#E2E8F0' } } }
+                }
+            });
+        }
+
+        function switchTab(tab, evt) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            event.currentTarget.classList.add('active');
-            if(tab === 'simulator') updateSimulation();
+            if(evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+
+            setTimeout(() => {
+                if(tab === 'batch') renderTreatmentChart();
+                if(tab === 'single') inspectSelectedBottle();
+                if(tab === 'simulator') updateSimulation();
+            }, 50);
         }
 
         document.getElementById('excel-upload').addEventListener('change', function(e) {
@@ -665,49 +718,6 @@
             showToast("Laporan lengkap berhasil diekspor!");
         }
 
-        function updateSimulation() {
-            const a = parseFloat(document.getElementById('sim-a').value);
-            const b = parseFloat(document.getElementById('sim-b').value);
-            const c = parseFloat(document.getElementById('sim-c').value);
-            const L = parseFloat(document.getElementById('sim-l').value);
-
-            document.getElementById('sim-val-a').innerText = `${a} mL`;
-            document.getElementById('sim-val-b').innerText = `${b} mL`;
-            document.getElementById('sim-val-c').innerText = `${c} /jam`;
-            document.getElementById('sim-val-l').innerText = `${L} jam`;
-
-            let pts = [];
-            for(let t = 0; t <= 72; t += 1) {
-                pts.push({ x: t, y: evalOrskov(t, a, b, c, L) });
-            }
-
-            if(!simChart) {
-                const ctxSim = document.getElementById('chart-simulation').getContext('2d');
-                simChart = new Chart(ctxSim, {
-                    type: 'line',
-                    data: {
-                        datasets: [{
-                            label: 'Simulasi Kurva Orskov',
-                            data: pts,
-                            borderColor: '#38BDF8', borderWidth: 3, fill: true,
-                            backgroundColor: 'rgba(56, 189, 248, 0.1)', tension: 0.3, pointRadius: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        scales: {
-                            x: { type: 'linear', min: 0, max: 72, title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                            y: { title: { display: true, text: 'Produksi Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
-                        },
-                        plugins: { legend: { labels: { color: '#E2E8F0' } } }
-                    }
-                });
-            } else {
-                simChart.data.datasets[0].data = pts;
-                simChart.update();
-            }
-        }
-
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-msg').innerText = msg;
@@ -715,7 +725,9 @@
             setTimeout(() => toast.classList.add('hidden'), 3500);
         }
 
-        window.addEventListener('DOMContentLoaded', loadDefaultResearchDataset);
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDefaultResearchDataset();
+        });
     </script>
 </body>
 </html>
