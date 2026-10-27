@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FeedLab Assistant — Ørskov–McDonald Model</title>
+    <title>FeedLab Assistant — Multi-Treatment & Replicates Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -27,10 +27,10 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-                        FeedLab Assistant <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ml-2">v1.1 Pilot</span>
+                        FeedLab Assistant <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ml-2">v2.0 Multi-Treatment Edition</span>
                     </h1>
                     <p class="text-xs text-slate-400 mt-0.5">
-                        Model Ørskov–McDonald — Software Pemodeln Kinetika Produksi Gas In Vitro Presisi Tinggi
+                        Pemodelan Kinetika Produksi Gas In Vitro (Ørskov–McDonald) — Otomasi Multi-Perlakuan & Ulangan
                     </p>
                     <p class="text-xs text-emerald-400/90 font-medium mt-0.5">
                         Dirancang oleh Dr. Teja Kaswari khusus untuk Laboratorium Nutrisi & Makanan Ternak, Fakultas Peternakan, Universitas Jambi.
@@ -40,11 +40,11 @@
             
             <div class="flex items-center gap-3">
                 <label for="excel-upload" class="cursor-pointer bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2 shadow-md shadow-emerald-500/20">
-                    <i class="fa-solid fa-file-excel"></i> Upload File Excel
+                    <i class="fa-solid fa-file-excel"></i> Upload File Excel Penelitian
                 </label>
                 <input type="file" id="excel-upload" accept=".xlsx, .xls" class="hidden">
-                <button onclick="exportResultsCSV()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
-                    <i class="fa-solid fa-download"></i> Ekspor CSV
+                <button onclick="exportBatchCSV()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i> Ekspor Laporan Riset (CSV)
                 </button>
             </div>
         </div>
@@ -55,120 +55,199 @@
 
         <!-- NAVIGASI TAB -->
         <div class="flex border-b border-slate-800 gap-8 text-sm text-slate-400">
-            <button class="tab-btn active py-3 px-1 flex items-center gap-2" onclick="switchTab('single')">
-                <i class="fa-solid fa-chart-line"></i> Analisis Botol Tunggal
+            <button class="tab-btn active py-3 px-1 flex items-center gap-2" onclick="switchTab('batch')">
+                <i class="fa-solid fa-layer-group"></i> Laporan Penelitian (Perlakuan & Ulangan)
+            </button>
+            <button class="tab-btn py-3 px-1 flex items-center gap-2" onclick="switchTab('single')">
+                <i class="fa-solid fa-chart-line"></i> Inspeksi Detail Per Botol
             </button>
             <button class="tab-btn py-3 px-1 flex items-center gap-2" onclick="switchTab('simulator')">
                 <i class="fa-solid fa-sliders"></i> Simulator Kinetika Integratif
             </button>
-            <button class="tab-btn py-3 px-1 flex items-center gap-2" onclick="switchTab('batch')">
-                <i class="fa-solid fa-layer-group"></i> Analisis Kombinasi / Batch
-            </button>
         </div>
 
-        <!-- TAB 1: SINGLE SAMPLE ANALYSIS -->
-        <div id="tab-single" class="tab-content space-y-6">
+        <!-- TAB 1: BATCH / MULTI-TREATMENT REPORT -->
+        <div id="tab-batch" class="tab-content space-y-6">
             
-            <!-- RINGKASAN PARAMETER METRIK -->
+            <!-- RINGKASAN DATA EXPERIMENT -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-l-emerald-500">
+                    <span class="text-xs text-slate-400 block font-medium">Total Botol/Sampel</span>
+                    <span id="stat-total-bottles" class="text-xl font-bold text-slate-100 mt-1 block">15</span>
+                    <span class="text-[10px] text-slate-500">Botol Inkubasi</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-l-teal-500">
+                    <span class="text-xs text-slate-400 block font-medium">Jumlah Perlakuan</span>
+                    <span id="stat-total-treatments" class="text-xl font-bold text-emerald-400 mt-1 block">3</span>
+                    <span class="text-[10px] text-slate-500">Grup Perlakuan</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-l-indigo-500">
+                    <span class="text-xs text-slate-400 block font-medium">Jumlah Ulangan</span>
+                    <span id="stat-replicates" class="text-xl font-bold text-slate-100 mt-1 block">5</span>
+                    <span class="text-[10px] text-slate-500">Ulangan / Perlakuan</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-l-amber-500">
+                    <span class="text-xs text-slate-400 block font-medium">Rata-rata R² Model</span>
+                    <span id="stat-avg-r2" class="text-xl font-bold text-amber-400 mt-1 block">0.9932</span>
+                    <span class="text-[10px] text-slate-500">Presisi Kebaikan Suai</span>
+                </div>
+            </div>
+
+            <!-- TABEL RINGKASAN PER PERLAKUAN (RATA-RATA +/- STD DEV) -->
+            <div class="glass-panel p-6 rounded-2xl">
+                <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells text-emerald-400"></i> Rataan Parameter Kinetika Fermentasi per Perlakuan (Mean ± SD)
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-700 text-slate-400 bg-slate-800/50">
+                                <th class="py-3 px-3">Kode Perlakuan</th>
+                                <th class="py-3 px-3">Ulangan (n)</th>
+                                <th class="py-3 px-3">a (mL)</th>
+                                <th class="py-3 px-3">b (mL)</th>
+                                <th class="py-3 px-3">a + b (mL)</th>
+                                <th class="py-3 px-3">c (jam⁻¹)</th>
+                                <th class="py-3 px-3">L (jam)</th>
+                                <th class="py-3 px-3">Rataan R²</th>
+                            </tr>
+                        </thead>
+                        <tbody id="treatment-summary-body" class="divide-y divide-slate-800 text-slate-300">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- GRAFIK COMPARATIVE PERLAKUAN & DETAIL SEMUA BOTOL -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Kurva Perbandingan Perlakuan -->
+                <div class="glass-panel p-5 rounded-2xl lg:col-span-2">
+                    <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-area text-emerald-400"></i> Kurva Profil Fermentasi Rataan Tiap Perlakuan
+                    </h3>
+                    <div class="h-[360px]">
+                        <canvas id="chart-batch-treatments"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabel Detail per Botol (Scrollable) -->
+                <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-vial text-teal-400"></i> Parameter Masing-masing Botol (15 Botol)
+                        </h3>
+                        <div class="max-h-[320px] overflow-y-auto pr-1">
+                            <table class="w-full text-left text-[11px] border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-700 text-slate-400">
+                                        <th class="py-1.5 px-1">Botol</th>
+                                        <th class="py-1.5 px-1">a</th>
+                                        <th class="py-1.5 px-1">b</th>
+                                        <th class="py-1.5 px-1">c</th>
+                                        <th class="py-1.5 px-1">L</th>
+                                        <th class="py-1.5 px-1">R²</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-bottles-body" class="divide-y divide-slate-800 text-slate-300 font-mono">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TAB 2: INSPEKSI BOTOL TUNGGAL -->
+        <div id="tab-single" class="tab-content hidden space-y-6">
+            <div class="flex items-center gap-4 bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                <label class="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-filter text-emerald-400"></i> Pilih Botol/Sampel untuk Diinspeksi:
+                </label>
+                <select id="bottle-selector" onchange="inspectSelectedBottle()" class="bg-slate-900 border border-slate-700 text-emerald-400 text-xs px-3 py-1.5 rounded-lg font-semibold outline-none">
+                    <!-- Dynamic bottle options -->
+                </select>
+            </div>
+
+            <!-- RINGKASAN BOTOL TERPILIH -->
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-emerald-500">
                     <span class="text-xs text-slate-400 block font-medium">a (Gas Terlarut)</span>
-                    <span id="res-a" class="text-xl font-bold text-slate-100 mt-1 block">3.9000</span>
-                    <span class="text-[10px] text-slate-500">mL / 0.5g BK</span>
+                    <span id="single-a" class="text-xl font-bold text-slate-100 mt-1 block">-</span>
+                    <span class="text-[10px] text-slate-500">mL</span>
                 </div>
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-teal-500">
                     <span class="text-xs text-slate-400 block font-medium">b (Potensi Gas)</span>
-                    <span id="res-b" class="text-xl font-bold text-slate-100 mt-1 block">128.4000</span>
-                    <span class="text-[10px] text-slate-500">mL / 0.5g BK</span>
+                    <span id="single-b" class="text-xl font-bold text-slate-100 mt-1 block">-</span>
+                    <span class="text-[10px] text-slate-500">mL</span>
                 </div>
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-cyan-500">
                     <span class="text-xs text-slate-400 block font-medium">a + b (Total Maks)</span>
-                    <span id="res-ab" class="text-xl font-bold text-emerald-400 mt-1 block">132.3000</span>
+                    <span id="single-ab" class="text-xl font-bold text-emerald-400 mt-1 block">-</span>
                     <span class="text-[10px] text-slate-500">mL</span>
                 </div>
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-indigo-500">
                     <span class="text-xs text-slate-400 block font-medium">c (Laju Fermentasi)</span>
-                    <span id="res-c" class="text-xl font-bold text-slate-100 mt-1 block">0.0757</span>
+                    <span id="single-c" class="text-xl font-bold text-slate-100 mt-1 block">-</span>
                     <span class="text-[10px] text-slate-500">jam⁻¹</span>
                 </div>
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-purple-500">
                     <span class="text-xs text-slate-400 block font-medium">L (Lag Time)</span>
-                    <span id="res-l" class="text-xl font-bold text-slate-100 mt-1 block">3.3000</span>
+                    <span id="single-l" class="text-xl font-bold text-slate-100 mt-1 block">-</span>
                     <span class="text-[10px] text-slate-500">jam</span>
                 </div>
                 <div class="glass-panel p-4 rounded-xl border-l-4 border-l-amber-500">
                     <span class="text-xs text-slate-400 block font-medium">Goodness of Fit</span>
                     <div class="mt-1">
-                        <span class="text-xs text-slate-300">R²: <strong id="res-r2" class="text-emerald-400">0.9953</strong></span><br>
-                        <span class="text-[10px] text-slate-400">RMSE: <span id="res-rmse">4.1565</span> mL</span>
+                        <span class="text-xs text-slate-300">R²: <strong id="single-r2" class="text-emerald-400">-</strong></span><br>
+                        <span class="text-[10px] text-slate-400">RMSE: <span id="single-rmse">-</span> mL</span>
                     </div>
                 </div>
             </div>
 
-            <!-- TABEL DATA & GRAFIK FIT -->
+            <!-- GRAFIK SINGLE FIT & RESIDUAL -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Tabel Input Data -->
-                <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                                <i class="fa-solid fa-table text-emerald-400"></i> Tabel Pengamatan Inkubasi
-                            </h3>
-                            <button onclick="resetDefaultData()" class="text-xs text-emerald-400 hover:underline">Reset Default</button>
-                        </div>
-                        <div class="max-h-[380px] overflow-y-auto pr-1">
-                            <table class="w-full text-left text-xs border-collapse">
-                                <thead>
-                                    <tr class="border-b border-slate-700 text-slate-400">
-                                        <th class="py-2 px-2">Jam (t)</th>
-                                        <th class="py-2 px-2">Gas Obs (y)</th>
-                                        <th class="py-2 px-2">Prediksi (ŷ)</th>
-                                        <th class="py-2 px-2">Residual</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="table-body" class="divide-y divide-slate-800 text-slate-300">
-                                    <!-- Dynamic rows -->
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="glass-panel p-5 rounded-2xl">
+                    <h3 class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-table text-emerald-400"></i> Data Inkubasi Botol Ini
+                    </h3>
+                    <div class="max-h-[320px] overflow-y-auto pr-1">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-700 text-slate-400">
+                                    <th class="py-2 px-2">Jam (t)</th>
+                                    <th class="py-2 px-2">Gas Obs</th>
+                                    <th class="py-2 px-2">Prediksi</th>
+                                    <th class="py-2 px-2">Residual</th>
+                                </tr>
+                            </thead>
+                            <tbody id="single-table-body" class="divide-y divide-slate-800 text-slate-300 font-mono">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
                     </div>
-                    <button onclick="runOptimization()" class="w-full mt-4 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 py-2.5 rounded-xl font-medium text-xs transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-calculator"></i> Jalankan Fit ulang Model Ørskov
-                    </button>
                 </div>
 
-                <!-- Grafik Fitting -->
                 <div class="glass-panel p-5 rounded-2xl lg:col-span-2">
                     <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-area text-emerald-400"></i> Kurva Akumulasi Produksi Gas (Observasi vs Prediksi)
+                        <i class="fa-solid fa-chart-area text-emerald-400"></i> Fit Kurva Ørskov Botol Terpilih
                     </h3>
-                    <div class="h-[360px]">
-                        <canvas id="chart-fit"></canvas>
+                    <div class="h-[320px]">
+                        <canvas id="chart-single-fit"></canvas>
                     </div>
                 </div>
             </div>
-
-            <!-- GRAFIK RESIDUAL -->
-            <div class="glass-panel p-5 rounded-2xl">
-                <h3 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-line text-cyan-400"></i> Sebaran Residual Model (y - ŷ)
-                </h3>
-                <div class="h-[180px]">
-                    <canvas id="chart-residual"></canvas>
-                </div>
-            </div>
-
         </div>
 
-        <!-- TAB 2: SIMULATOR KINETIKA INTEGRATIF -->
+        <!-- TAB 3: SIMULATOR -->
         <div id="tab-simulator" class="tab-content hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Sliders -->
                 <div class="glass-panel p-6 rounded-2xl space-y-5">
                     <h3 class="text-sm font-semibold text-slate-200 border-b border-slate-800 pb-3 flex items-center gap-2">
                         <i class="fa-solid fa-sliders text-emerald-400"></i> Kontrol Parameter Kinetika
                     </h3>
-                    
                     <div>
                         <div class="flex justify-between text-xs mb-1">
                             <span class="text-slate-300">a (Gas Terlarut):</span>
@@ -176,7 +255,6 @@
                         </div>
                         <input type="range" id="sim-a" min="-10" max="20" step="0.5" value="3.9" class="w-full accent-emerald-500" oninput="updateSimulation()">
                     </div>
-
                     <div>
                         <div class="flex justify-between text-xs mb-1">
                             <span class="text-slate-300">b (Potensi Gas):</span>
@@ -184,7 +262,6 @@
                         </div>
                         <input type="range" id="sim-b" min="50" max="250" step="1" value="128.4" class="w-full accent-teal-500" oninput="updateSimulation()">
                     </div>
-
                     <div>
                         <div class="flex justify-between text-xs mb-1">
                             <span class="text-slate-300">c (Laju Fermentasi):</span>
@@ -192,7 +269,6 @@
                         </div>
                         <input type="range" id="sim-c" min="0.01" max="0.25" step="0.005" value="0.0757" class="w-full accent-indigo-500" oninput="updateSimulation()">
                     </div>
-
                     <div>
                         <div class="flex justify-between text-xs mb-1">
                             <span class="text-slate-300">L (Lag Time):</span>
@@ -201,8 +277,6 @@
                         <input type="range" id="sim-l" min="0" max="12" step="0.5" value="3.3" class="w-full accent-purple-500" oninput="updateSimulation()">
                     </div>
                 </div>
-
-                <!-- Simulation Graph -->
                 <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
                     <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-wave-square text-emerald-400"></i> Visualisasi Respon Dinamis Kurva Ørskov
@@ -210,44 +284,6 @@
                     <div class="h-[360px]">
                         <canvas id="chart-simulation"></canvas>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 3: BATCH ANALYSIS -->
-        <div id="tab-batch" class="tab-content hidden space-y-6">
-            <div class="glass-panel p-6 rounded-2xl">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                        <i class="fa-solid fa-list-check text-emerald-400"></i> Perbandingan Parameter Multi-Botol / Perlakuan
-                    </h3>
-                    <button onclick="addBatchBottle()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-3 py-1.5 rounded-lg text-xs transition">
-                        + Tambah Botol / Perlakuan
-                    </button>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-700 text-slate-400">
-                                <th class="py-3 px-3">Kode Botol</th>
-                                <th class="py-3 px-3">a (mL)</th>
-                                <th class="py-3 px-3">b (mL)</th>
-                                <th class="py-3 px-3">a + b (mL)</th>
-                                <th class="py-3 px-3">c (jam⁻¹)</th>
-                                <th class="py-3 px-3">L (jam)</th>
-                                <th class="py-3 px-3">R²</th>
-                                <th class="py-3 px-3">RMSE</th>
-                            </tr>
-                        </thead>
-                        <tbody id="batch-table-body" class="divide-y divide-slate-800 text-slate-300">
-                            <!-- Batch items -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-6 h-[320px]">
-                    <canvas id="chart-batch"></canvas>
                 </div>
             </div>
         </div>
@@ -261,376 +297,309 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // DATA SETTINGS & INITIAL STATE
-        let dataset = [
-            { t: 2, y: 4 }, { t: 4, y: 11 }, { t: 8, y: 41 },
-            { t: 12, y: 69 }, { t: 16, y: 81 }, { t: 24, y: 101 },
-            { t: 36, y: 129 }, { t: 48, y: 129 }, { t: 60, y: 129 }, { t: 72, y: 129 }
-        ];
+        // MASTER DATABASE MULTI BOTTLE & TREATMENT
+        let allBottlesResults = [];
+        let treatmentSummaries = [];
+        let singleChart, batchTreatmentsChart, simChart;
 
-        let currentParams = { a: 3.9, b: 128.4, c: 0.0757, L: 3.3, r2: 0.9953, rmse: 4.1565 };
-        let fitChart, residualChart, simChart, batchChart;
+        // GENERATE DEMO RESEARCH DATASET (3 PERLAKUAN x 5 ULANGAN = 15 BOTOL)
+        function loadDefaultResearchDataset() {
+            allBottlesResults = [];
+            const treatments = [
+                { name: 'P0 (Kontrol)', baseA: 3.9, baseB: 128.4, baseC: 0.0757, baseL: 3.3 },
+                { name: 'P1 (Legum 15%)', baseA: 4.2, baseB: 136.5, baseC: 0.0820, baseL: 2.8 },
+                { name: 'P2 (Legum 30%)', baseA: 4.8, baseB: 142.0, baseC: 0.0880, baseL: 2.2 }
+            ];
 
-        // BATCH DATA STORAGE
-        let batchData = [
-            { id: 'BW1 (Kontrol)', a: 3.90, b: 128.40, c: 0.0757, L: 3.30, r2: 0.9953, rmse: 4.15 },
-            { id: 'BW2 (Perlakuan A)', a: 4.10, b: 135.20, c: 0.0810, L: 2.90, r2: 0.9921, rmse: 4.62 },
-            { id: 'BW3 (Perlakuan B)', a: 2.80, b: 118.60, c: 0.0690, L: 4.10, r2: 0.9885, rmse: 5.10 }
-        ];
+            const times = [2, 4, 8, 12, 16, 24, 36, 48, 60, 72];
 
-        // ORSKOV MCDONALD MODEL EVALUATION
+            treatments.forEach(trt => {
+                for(let rep = 1; rep <= 5; rep++) {
+                    let bottleId = `${trt.name}-U${rep}`;
+                    // Add minor experimental variations
+                    let varA = trt.baseA + (Math.random() * 0.4 - 0.2);
+                    let varB = trt.baseB + (Math.random() * 4 - 2);
+                    let varC = trt.baseC + (Math.random() * 0.004 - 0.002);
+                    let varL = trt.baseL + (Math.random() * 0.3 - 0.15);
+
+                    let obsData = times.map(t => {
+                        let yHat = t < varL ? varA : varA + varB * (1 - Math.exp(-varC * (t - varL)));
+                        let noise = (Math.random() * 3 - 1.5);
+                        return { t: t, y: Math.max(0, parseFloat((yHat + noise).toFixed(1))) };
+                    });
+
+                    // Fit model for this bottle
+                    let fit = fitOrskovForBottle(obsData);
+                    allBottlesResults.push({
+                        bottleId: bottleId,
+                        treatment: trt.name,
+                        replicate: rep,
+                        obsData: obsData,
+                        params: fit
+                    });
+                }
+            });
+
+            computeTreatmentSummaries();
+            renderAllViews();
+        }
+
+        // MODEL EVALUATION & FITTING
         function evalOrskov(t, a, b, c, L) {
             return t < L ? a : a + b * (1 - Math.exp(-c * (t - L)));
         }
 
-        // INITIALIZATION
-        window.addEventListener('DOMContentLoaded', () => {
-            renderTable();
-            initCharts();
-            runOptimization();
-            renderBatchView();
-        });
-
-        // SWITCH TABS
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            event.currentTarget.classList.add('active');
-
-            if(tab === 'simulator') updateSimulation();
-            if(tab === 'batch') renderBatchView();
-        }
-
-        // RENDER DATA TABLE
-        function renderTable() {
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '';
-            dataset.forEach((row, i) => {
-                const yHat = evalOrskov(row.t, currentParams.a, currentParams.b, currentParams.c, currentParams.L);
-                const res = row.y - yHat;
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="py-2 px-2 font-mono">${row.t}</td>
-                        <td class="py-2 px-2 font-mono"><input type="number" value="${row.y}" onchange="updateObsVal(${i}, this.value)" class="bg-slate-800 border border-slate-700 w-16 px-1.5 py-0.5 rounded text-xs text-emerald-400"></td>
-                        <td class="py-2 px-2 font-mono text-slate-400">${yHat.toFixed(2)}</td>
-                        <td class="py-2 px-2 font-mono ${res >= 0 ? 'text-emerald-400':'text-rose-400'}">${res > 0 ? '+':''}${res.toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-        }
-
-        function updateObsVal(idx, val) {
-            dataset[idx].y = parseFloat(val) || 0;
-            runOptimization();
-        }
-
-        function resetDefaultData() {
-            dataset = [
-                { t: 2, y: 4 }, { t: 4, y: 11 }, { t: 8, y: 41 },
-                { t: 12, y: 69 }, { t: 16, y: 81 }, { t: 24, y: 101 },
-                { t: 36, y: 129 }, { t: 48, y: 129 }, { t: 60, y: 129 }, { t: 72, y: 129 }
-            ];
-            runOptimization();
-            showToast("Data berhasil di-reset ke nilai standar.");
-        }
-
-        // TWO-STEP ITERATIVE OPTIMIZATION ALGORITHM
-        function runOptimization() {
-            let bestParams = { a: 3.9, b: 128.4, c: 0.0757, L: 3.3 };
+        function fitOrskovForBottle(obsData) {
+            let bestParams = { a: 4, b: 130, c: 0.07, L: 3 };
             let minSSR = Infinity;
 
-            // Step 1: Coarse Search
             for(let a = -5; a <= 15; a += 2) {
                 for(let b = 80; b <= 180; b += 5) {
                     for(let c = 0.02; c <= 0.15; c += 0.01) {
                         for(let L = 0; L <= 6; L += 0.5) {
                             let ssr = 0;
-                            dataset.forEach(d => {
+                            obsData.forEach(d => {
                                 let pred = evalOrskov(d.t, a, b, c, L);
                                 ssr += Math.pow(d.y - pred, 2);
                             });
-                            if(ssr < minSSR) {
-                                minSSR = ssr;
-                                bestParams = { a, b, c, L };
-                            }
+                            if(ssr < minSSR) { minSSR = ssr; bestParams = { a, b, c, L }; }
                         }
                     }
                 }
             }
 
-            // Step 2: Fine Refinement
             let fineA = bestParams.a, fineB = bestParams.b, fineC = bestParams.c, fineL = bestParams.L;
-            for(let a = fineA - 2; a <= fineA + 2; a += 0.1) {
-                for(let b = fineB - 5; b <= fineB + 5; b += 0.2) {
-                    for(let c = Math.max(0.001, fineC - 0.01); c <= fineC + 0.01; c += 0.0005) {
-                        for(let L = Math.max(0, fineL - 0.5); L <= fineL + 0.5; L += 0.05) {
+            for(let a = fineA - 2; a <= fineA + 2; a += 0.2) {
+                for(let b = fineB - 5; b <= fineB + 5; b += 0.5) {
+                    for(let c = Math.max(0.001, fineC - 0.01); c <= fineC + 0.01; c += 0.001) {
+                        for(let L = Math.max(0, fineL - 0.5); L <= fineL + 0.5; L += 0.1) {
                             let ssr = 0;
-                            dataset.forEach(d => {
+                            obsData.forEach(d => {
                                 let pred = evalOrskov(d.t, a, b, c, L);
                                 ssr += Math.pow(d.y - pred, 2);
                             });
-                            if(ssr < minSSR) {
-                                minSSR = ssr;
-                                bestParams = { a, b, c, L };
-                            }
+                            if(ssr < minSSR) { minSSR = ssr; bestParams = { a, b, c, L }; }
                         }
                     }
                 }
             }
 
-            // Calculate Fit Metrics
-            let yMean = dataset.reduce((acc, d) => acc + d.y, 0) / dataset.length;
-            let tss = dataset.reduce((acc, d) => acc + Math.pow(d.y - yMean, 2), 0);
+            let yMean = obsData.reduce((acc, d) => acc + d.y, 0) / obsData.length;
+            let tss = obsData.reduce((acc, d) => acc + Math.pow(d.y - yMean, 2), 0);
             let r2 = 1 - (minSSR / tss);
-            let rmse = Math.sqrt(minSSR / (dataset.length - 4));
+            let rmse = Math.sqrt(minSSR / (obsData.length - 4));
 
-            currentParams = { 
-                a: parseFloat(bestParams.a.toFixed(4)), 
-                b: parseFloat(bestParams.b.toFixed(4)), 
-                c: parseFloat(bestParams.c.toFixed(4)), 
+            return {
+                a: parseFloat(bestParams.a.toFixed(4)),
+                b: parseFloat(bestParams.b.toFixed(4)),
+                c: parseFloat(bestParams.c.toFixed(4)),
                 L: parseFloat(bestParams.L.toFixed(4)),
                 r2: parseFloat(r2.toFixed(4)),
                 rmse: parseFloat(rmse.toFixed(4))
             };
-
-            // Update DOM Values
-            document.getElementById('res-a').innerText = currentParams.a.toFixed(4);
-            document.getElementById('res-b').innerText = currentParams.b.toFixed(4);
-            document.getElementById('res-ab').innerText = (currentParams.a + currentParams.b).toFixed(4);
-            document.getElementById('res-c').innerText = currentParams.c.toFixed(4);
-            document.getElementById('res-l').innerText = currentParams.L.toFixed(4);
-            document.getElementById('res-r2').innerText = currentParams.r2.toFixed(4);
-            document.getElementById('res-rmse').innerText = currentParams.rmse.toFixed(4);
-
-            renderTable();
-            updateCharts();
         }
 
-        // INITIALIZE CHART.JS PLOTS
-        function initCharts() {
-            const ctxFit = document.getElementById('chart-fit').getContext('2d');
-            fitChart = new Chart(ctxFit, {
-                type: 'scatter',
-                data: {
-                    datasets: [
-                        {
-                            label: 'Data Observasi (Eksperimen)',
-                            data: dataset.map(d => ({ x: d.t, y: d.y })),
-                            backgroundColor: '#10B981',
-                            pointRadius: 6,
-                            pointHoverRadius: 8
+        // COMPUTE MEAN & STD DEV PER TREATMENT
+        function computeTreatmentSummaries() {
+            let trtMap = {};
+            allBottlesResults.forEach(item => {
+                if(!trtMap[item.treatment]) trtMap[item.treatment] = [];
+                trtMap[item.treatment].push(item.params);
+            });
+
+            treatmentSummaries = [];
+            for(let trtName in trtMap) {
+                let list = trtMap[trtName];
+                let n = list.length;
+
+                let meanA = list.reduce((s, p) => s + p.a, 0) / n;
+                let meanB = list.reduce((s, p) => s + p.b, 0) / n;
+                let meanC = list.reduce((s, p) => s + p.c, 0) / n;
+                let meanL = list.reduce((s, p) => s + p.L, 0) / n;
+                let meanR2 = list.reduce((s, p) => s + p.r2, 0) / n;
+
+                let sdA = Math.sqrt(list.reduce((s, p) => s + Math.pow(p.a - meanA, 2), 0) / (n - 1 || 1));
+                let sdB = Math.sqrt(list.reduce((s, p) => s + Math.pow(p.b - meanB, 2), 0) / (n - 1 || 1));
+                let sdC = Math.sqrt(list.reduce((s, p) => s + Math.pow(p.c - meanC, 2), 0) / (n - 1 || 1));
+                let sdL = Math.sqrt(list.reduce((s, p) => s + Math.pow(p.L - meanL, 2), 0) / (n - 1 || 1));
+
+                treatmentSummaries.push({
+                    name: trtName,
+                    n: n,
+                    a: meanA, sdA: sdA,
+                    b: meanB, sdB: sdB,
+                    ab: meanA + meanB,
+                    c: meanC, sdC: sdC,
+                    L: meanL, sdL: sdL,
+                    r2: meanR2
+                });
+            }
+        }
+
+        // RENDER ALL VIEWS
+        function renderAllViews() {
+            // Update Stat Cards
+            document.getElementById('stat-total-bottles').innerText = allBottlesResults.length;
+            document.getElementById('stat-total-treatments').innerText = treatmentSummaries.length;
+            document.getElementById('stat-replicates').innerText = treatmentSummaries.length > 0 ? treatmentSummaries[0].n : 0;
+            let avgR2 = allBottlesResults.reduce((s, b) => s + b.params.r2, 0) / (allBottlesResults.length || 1);
+            document.getElementById('stat-avg-r2').innerText = avgR2.toFixed(4);
+
+            // Populate Summary Table
+            const trtBody = document.getElementById('treatment-summary-body');
+            trtBody.innerHTML = '';
+            treatmentSummaries.forEach(t => {
+                trtBody.innerHTML += `
+                    <tr>
+                        <td class="py-3 px-3 font-bold text-emerald-400">${t.name}</td>
+                        <td class="py-3 px-3 font-mono">${t.n}</td>
+                        <td class="py-3 px-3 font-mono">${t.a.toFixed(2)} ± ${t.sdA.toFixed(2)}</td>
+                        <td class="py-3 px-3 font-mono">${t.b.toFixed(2)} ± ${t.sdB.toFixed(2)}</td>
+                        <td class="py-3 px-3 font-mono text-teal-300 font-bold">${t.ab.toFixed(2)}</td>
+                        <td class="py-3 px-3 font-mono">${t.c.toFixed(4)} ± ${t.sdC.toFixed(4)}</td>
+                        <td class="py-3 px-3 font-mono">${t.L.toFixed(2)} ± ${t.sdL.toFixed(2)}</td>
+                        <td class="py-3 px-3 font-mono text-emerald-400 font-bold">${t.r2.toFixed(4)}</td>
+                    </tr>
+                `;
+            });
+
+            // Populate All Bottles Table
+            const btlBody = document.getElementById('all-bottles-body');
+            btlBody.innerHTML = '';
+            const selector = document.getElementById('bottle-selector');
+            selector.innerHTML = '';
+
+            allBottlesResults.forEach((b, idx) => {
+                btlBody.innerHTML += `
+                    <tr>
+                        <td class="py-1.5 px-1 font-semibold text-emerald-400">${b.bottleId}</td>
+                        <td class="py-1.5 px-1">${b.params.a.toFixed(2)}</td>
+                        <td class="py-1.5 px-1">${b.params.b.toFixed(2)}</td>
+                        <td class="py-1.5 px-1">${b.params.c.toFixed(4)}</td>
+                        <td class="py-1.5 px-1">${b.params.L.toFixed(2)}</td>
+                        <td class="py-1.5 px-1 text-emerald-300">${b.params.r2.toFixed(4)}</td>
+                    </tr>
+                `;
+                selector.innerHTML += `<option value="${idx}">${b.bottleId}</option>`;
+            });
+
+            renderTreatmentChart();
+            inspectSelectedBottle();
+        }
+
+        // RENDER BATCH TREATMENT CHART
+        function renderTreatmentChart() {
+            const ctx = document.getElementById('chart-batch-treatments').getContext('2d');
+            const colors = ['#10B981', '#38BDF8', '#F59E0B', '#EC4899', '#8B5CF6'];
+
+            let datasets = treatmentSummaries.map((trt, idx) => {
+                let pts = [];
+                for(let t = 0; t <= 72; t += 1) {
+                    pts.push({ x: t, y: evalOrskov(t, trt.a, trt.b, trt.c, trt.L) });
+                }
+                return {
+                    label: `${trt.name} (Rataan)`,
+                    data: pts,
+                    borderColor: colors[idx % colors.length],
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                };
+            });
+
+            if(!batchTreatmentsChart) {
+                batchTreatmentsChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { title: { display: true, text: 'Waktu Inkubasi (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
+                            y: { title: { display: true, text: 'Produksi Gas Kumulatif Rataan (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
                         },
-                        {
-                            label: 'Prediksi Model Ørskov–McDonald',
-                            data: generateCurveData(currentParams.a, currentParams.b, currentParams.c, currentParams.L),
-                            type: 'line',
-                            borderColor: '#14B8A6',
-                            borderWidth: 2.5,
-                            fill: false,
-                            pointRadius: 0,
-                            tension: 0.3
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { title: { display: true, text: 'Waktu Inkubasi (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                        y: { title: { display: true, text: 'Produksi Gas Kumulatif (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
-                    },
-                    plugins: { legend: { labels: { color: '#E2E8F0' } } }
-                }
-            });
-
-            const ctxRes = document.getElementById('chart-residual').getContext('2d');
-            residualChart = new Chart(ctxRes, {
-                type: 'bar',
-                data: {
-                    labels: dataset.map(d => `${d.t}h`),
-                    datasets: [{
-                        label: 'Residual (y - ŷ)',
-                        data: dataset.map(d => d.y - evalOrskov(d.t, currentParams.a, currentParams.b, currentParams.c, currentParams.L)),
-                        backgroundColor: dataset.map(d => (d.y - evalOrskov(d.t, currentParams.a, currentParams.b, currentParams.c, currentParams.L)) >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(244, 63, 94, 0.6)')
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#94A3B8' } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
+                        plugins: { legend: { labels: { color: '#E2E8F0' } } }
+                    }
+                });
+            } else {
+                batchTreatmentsChart.data.datasets = datasets;
+                batchTreatmentsChart.update();
+            }
         }
 
-        function generateCurveData(a, b, c, L) {
+        // INSPECT SINGLE BOTTLE
+        function inspectSelectedBottle() {
+            const idx = parseInt(document.getElementById('bottle-selector').value || 0);
+            const bottle = allBottlesResults[idx];
+            if(!bottle) return;
+
+            document.getElementById('single-a').innerText = bottle.params.a.toFixed(4);
+            document.getElementById('single-b').innerText = bottle.params.b.toFixed(4);
+            document.getElementById('single-ab').innerText = (bottle.params.a + bottle.params.b).toFixed(4);
+            document.getElementById('single-c').innerText = bottle.params.c.toFixed(4);
+            document.getElementById('single-l').innerText = bottle.params.L.toFixed(4);
+            document.getElementById('single-r2').innerText = bottle.params.r2.toFixed(4);
+            document.getElementById('single-rmse').innerText = bottle.params.rmse.toFixed(4);
+
+            const tbody = document.getElementById('single-table-body');
+            tbody.innerHTML = '';
+            bottle.obsData.forEach(d => {
+                let yHat = evalOrskov(d.t, bottle.params.a, bottle.params.b, bottle.params.c, bottle.params.L);
+                let res = d.y - yHat;
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="py-1.5 px-2">${d.t}</td>
+                        <td class="py-1.5 px-2 text-emerald-400">${d.y}</td>
+                        <td class="py-1.5 px-2 text-slate-400">${yHat.toFixed(2)}</td>
+                        <td class="py-1.5 px-2 ${res >= 0 ? 'text-emerald-400':'text-rose-400'}">${res > 0 ? '+':''}${res.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            // Single Chart
+            const ctx = document.getElementById('chart-single-fit').getContext('2d');
             let pts = [];
             for(let t = 0; t <= 72; t += 1) {
-                pts.push({ x: t, y: evalOrskov(t, a, b, c, L) });
+                pts.push({ x: t, y: evalOrskov(t, bottle.params.a, bottle.params.b, bottle.params.c, bottle.params.L) });
             }
-            return pts;
-        }
 
-        function updateCharts() {
-            if(!fitChart) return;
-            fitChart.data.datasets[0].data = dataset.map(d => ({ x: d.t, y: d.y }));
-            fitChart.data.datasets[1].data = generateCurveData(currentParams.a, currentParams.b, currentParams.c, currentParams.L);
-            fitChart.update();
-
-            const resData = dataset.map(d => d.y - evalOrskov(d.t, currentParams.a, currentParams.b, currentParams.c, currentParams.L));
-            residualChart.data.labels = dataset.map(d => `${d.t}h`);
-            residualChart.data.datasets[0].data = resData;
-            residualChart.data.datasets[0].backgroundColor = resData.map(r => r >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(244, 63, 94, 0.7)');
-            residualChart.update();
-        }
-
-        // SIMULATOR FUNCTIONALITY
-        function updateSimulation() {
-            const a = parseFloat(document.getElementById('sim-a').value);
-            const b = parseFloat(document.getElementById('sim-b').value);
-            const c = parseFloat(document.getElementById('sim-c').value);
-            const L = parseFloat(document.getElementById('sim-l').value);
-
-            document.getElementById('sim-val-a').innerText = `${a} mL`;
-            document.getElementById('sim-val-b').innerText = `${b} mL`;
-            document.getElementById('sim-val-c').innerText = `${c} /jam`;
-            document.getElementById('sim-val-l').innerText = `${L} jam`;
-
-            if(!simChart) {
-                const ctxSim = document.getElementById('chart-simulation').getContext('2d');
-                simChart = new Chart(ctxSim, {
-                    type: 'line',
+            if(!singleChart) {
+                singleChart = new Chart(ctx, {
+                    type: 'scatter',
                     data: {
-                        datasets: [{
-                            label: 'Simulasi Kurva Orskov',
-                            data: generateCurveData(a, b, c, L),
-                            borderColor: '#38BDF8',
-                            borderWidth: 3,
-                            fill: true,
-                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                            tension: 0.3,
-                            pointRadius: 0
-                        }]
+                        datasets: [
+                            { label: 'Data Observasi', data: bottle.obsData.map(d => ({ x: d.t, y: d.y })), backgroundColor: '#10B981', pointRadius: 6 },
+                            { label: 'Prediksi Model Ørskov', data: pts, type: 'line', borderColor: '#14B8A6', borderWidth: 2.5, pointRadius: 0, tension: 0.3 }
+                        ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
                             x: { title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                            y: { title: { display: true, text: 'Produksi Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
+                            y: { title: { display: true, text: 'Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
                         },
                         plugins: { legend: { labels: { color: '#E2E8F0' } } }
                     }
                 });
             } else {
-                simChart.data.datasets[0].data = generateCurveData(a, b, c, L);
-                simChart.update();
+                singleChart.data.datasets[0].data = bottle.obsData.map(d => ({ x: d.t, y: d.y }));
+                singleChart.data.datasets[1].data = pts;
+                singleChart.update();
             }
         }
 
-        // BATCH ANALYSIS RENDER
-        function renderBatchView() {
-            const tbody = document.getElementById('batch-table-body');
-            tbody.innerHTML = '';
-            batchData.forEach(item => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="py-2.5 px-3 font-semibold text-emerald-400">${item.id}</td>
-                        <td class="py-2.5 px-3 font-mono">${item.a.toFixed(2)}</td>
-                        <td class="py-2.5 px-3 font-mono">${item.b.toFixed(2)}</td>
-                        <td class="py-2.5 px-3 font-mono text-teal-300 font-bold">${(item.a + item.b).toFixed(2)}</td>
-                        <td class="py-2.5 px-3 font-mono">${item.c.toFixed(4)}</td>
-                        <td class="py-2.5 px-3 font-mono">${item.L.toFixed(2)}</td>
-                        <td class="py-2.5 px-3 font-mono text-emerald-400">${item.r2.toFixed(4)}</td>
-                        <td class="py-2.5 px-3 font-mono">${item.rmse.toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-
-            if(!batchChart) {
-                const ctxBatch = document.getElementById('chart-batch').getContext('2d');
-                batchChart = new Chart(ctxBatch, {
-                    type: 'line',
-                    data: {
-                        datasets: batchData.map((item, idx) => ({
-                            label: item.id,
-                            data: generateCurveData(item.a, item.b, item.c, item.L),
-                            borderColor: ['#10B981', '#38BDF8', '#F59E0B', '#EC4899'][idx % 4],
-                            borderWidth: 2,
-                            tension: 0.3,
-                            pointRadius: 0
-                        }))
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { title: { display: true, text: 'Waktu Inkubasi (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
-                            y: { title: { display: true, text: 'Produksi Gas Kumulatif (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
-                        },
-                        plugins: { legend: { labels: { color: '#E2E8F0' } } }
-                    }
-                });
-            } else {
-                batchChart.data.datasets = batchData.map((item, idx) => ({
-                    label: item.id,
-                    data: generateCurveData(item.a, item.b, item.c, item.L),
-                    borderColor: ['#10B981', '#38BDF8', '#F59E0B', '#EC4899'][idx % 4],
-                    borderWidth: 2,
-                    tension: 0.3,
-                    pointRadius: 0
-                }));
-                batchChart.update();
-            }
+        // SWITCH TAB
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            event.currentTarget.classList.add('active');
+            if(tab === 'simulator') updateSimulation();
         }
 
-        function addBatchBottle() {
-            const nextIdx = batchData.length + 1;
-            batchData.push({
-                id: `BW${nextIdx} (Perlakuan Sample)`,
-                a: parseFloat((Math.random() * 3 + 2).toFixed(2)),
-                b: parseFloat((Math.random() * 20 + 120).toFixed(2)),
-                c: parseFloat((Math.random() * 0.02 + 0.07).toFixed(4)),
-                L: parseFloat((Math.random() * 2 + 2.5).toFixed(2)),
-                r2: 0.9912,
-                rmse: 4.30
-            });
-            renderBatchView();
-            showToast(`Botol BW${nextIdx} berhasil ditambahkan.`);
-        }
-
-        // EXPORT TO CSV
-        function exportResultsCSV() {
-            let csv = "Parameter,Nilai,Satuan\n";
-            csv += `a,${currentParams.a},mL\n`;
-            csv += `b,${currentParams.b},mL\n`;
-            csv += `a+b,${currentParams.a + currentParams.b},mL\n`;
-            csv += `c,${currentParams.c},jam-1\n`;
-            csv += `L,${currentParams.L},jam\n`;
-            csv += `R2,${currentParams.r2},-\n`;
-            csv += `RMSE,${currentParams.rmse},mL\n\n`;
-            csv += "Waktu(jam),Gas_Obs,Gas_Pred,Residual\n";
-
-            dataset.forEach(d => {
-                let yHat = evalOrskov(d.t, currentParams.a, currentParams.b, currentParams.c, currentParams.L);
-                csv += `${d.t},${d.y},${yHat.toFixed(4)},${(d.y - yHat).toFixed(4)}\n`;
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Hasil_Kinetika_Orskov_FeedLab_${Date.now()}.csv`;
-            a.click();
-            showToast("Hasil analisis berhasil diekspor ke file CSV!");
-        }
-
-        // EXCEL PARSER (READ .XLSX)
+        // EXCEL MULTI-BOTTLE PARSER
         document.getElementById('excel-upload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if(!file) return;
@@ -643,25 +612,122 @@
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
                 if(jsonData.length > 0) {
-                    dataset = jsonData.map(row => ({
-                        t: parseFloat(row.Time || row.t || row.Waktu || 0),
-                        y: parseFloat(row.Gas || row.y || row.Produksi || 0)
-                    })).filter(d => !isNaN(d.t) && !isNaN(d.y));
+                    // Group data by Treatment and Bottle
+                    let bottleGroup = {};
+                    jsonData.forEach(row => {
+                        let bottle = row.Bottle || row.Botol || row.Sample || row.Kode || 'BW1';
+                        let trt = row.Treatment || row.Perlakuan || bottle.split('-')[0] || 'Kontrol';
+                        let t = parseFloat(row.Time || row.t || row.Waktu || 0);
+                        let y = parseFloat(row.Gas || row.y || row.Produksi || 0);
 
-                    runOptimization();
-                    showToast("File Excel berhasil diimpor & dianalisis!");
+                        if(!bottleGroup[bottle]) {
+                            bottleGroup[bottle] = { treatment: trt, obsData: [] };
+                        }
+                        if(!isNaN(t) && !isNaN(y)) {
+                            bottleGroup[bottle].obsData.push({ t, y });
+                        }
+                    });
+
+                    // Re-calculate all bottles
+                    allBottlesResults = [];
+                    for(let bName in bottleGroup) {
+                        let bData = bottleGroup[bName];
+                        bData.obsData.sort((a,b) => a.t - b.t);
+                        let fit = fitOrskovForBottle(bData.obsData);
+                        allBottlesResults.push({
+                            bottleId: bName,
+                            treatment: bData.treatment,
+                            obsData: bData.obsData,
+                            params: fit
+                        });
+                    }
+
+                    computeTreatmentSummaries();
+                    renderAllViews();
+                    showToast(`Berhasil mengimpor & menganalisis ${allBottlesResults.length} botol sampel!`);
                 }
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // TOAST NOTIFICATION HELPERS
+        // EXPORT RESEARCH CSV REPORT
+        function exportBatchCSV() {
+            let csv = "LAPORAN KINETIKA FERMENTASI IN VITRO (MODEL ORSKOV-MCDONALD)\n";
+            csv += "FeedLab Assistant v2.0 Multi-Treatment Edition\n\n";
+            
+            csv += "1. RATAAN PARAMETER PER PERLAKUAN (MEAN +/- SD)\n";
+            csv += "Perlakuan,n,a(mL),SD_a,b(mL),SD_b,a+b(mL),c(jam-1),SD_c,L(jam),SD_L,Mean_R2\n";
+            treatmentSummaries.forEach(t => {
+                csv += `${t.name},${t.n},${t.a.toFixed(4)},${t.sdA.toFixed(4)},${t.b.toFixed(4)},${t.sdB.toFixed(4)},${t.ab.toFixed(4)},${t.c.toFixed(4)},${t.sdC.toFixed(4)},${t.L.toFixed(4)},${t.sdL.toFixed(4)},${t.r2.toFixed(4)}\n`;
+            });
+
+            csv += "\n2. DETAIL HASIL FITTING PER BOTOL/ULANGAN\n";
+            csv += "Kode_Botol,Perlakuan,a(mL),b(mL),a+b(mL),c(jam-1),L(jam),R2,RMSE\n";
+            allBottlesResults.forEach(b => {
+                csv += `${b.bottleId},${b.treatment},${b.params.a},${b.params.b},${(b.params.a+b.params.b).toFixed(4)},${b.params.c},${b.params.L},${b.params.r2},${b.params.rmse}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Laporan_Riset_FeedLab_Batch_${Date.now()}.csv`;
+            a.click();
+            showToast("Laporan lengkap berhasil diekspor!");
+        }
+
+        // SIMULATOR LOGIC
+        function updateSimulation() {
+            const a = parseFloat(document.getElementById('sim-a').value);
+            const b = parseFloat(document.getElementById('sim-b').value);
+            const c = parseFloat(document.getElementById('sim-c').value);
+            const L = parseFloat(document.getElementById('sim-l').value);
+
+            document.getElementById('sim-val-a').innerText = `${a} mL`;
+            document.getElementById('sim-val-b').innerText = `${b} mL`;
+            document.getElementById('sim-val-c').innerText = `${c} /jam`;
+            document.getElementById('sim-val-l').innerText = `${L} jam`;
+
+            let pts = [];
+            for(let t = 0; t <= 72; t += 1) {
+                pts.push({ x: t, y: evalOrskov(t, a, b, c, L) });
+            }
+
+            if(!simChart) {
+                const ctxSim = document.getElementById('chart-simulation').getContext('2d');
+                simChart = new Chart(ctxSim, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Simulasi Kurva Orskov',
+                            data: pts,
+                            borderColor: '#38BDF8', borderWidth: 3, fill: true,
+                            backgroundColor: 'rgba(56, 189, 248, 0.1)', tension: 0.3, pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: {
+                            x: { title: { display: true, text: 'Waktu (Jam)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } },
+                            y: { title: { display: true, text: 'Produksi Gas (mL)', color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94A3B8' } }
+                        },
+                        plugins: { legend: { labels: { color: '#E2E8F0' } } }
+                    }
+                });
+            } else {
+                simChart.data.datasets[0].data = pts;
+                simChart.update();
+            }
+        }
+
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-msg').innerText = msg;
             toast.classList.remove('hidden');
             setTimeout(() => toast.classList.add('hidden'), 3500);
         }
+
+        window.addEventListener('DOMContentLoaded', loadDefaultResearchDataset);
     </script>
 </body>
 </html>
